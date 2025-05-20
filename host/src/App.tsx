@@ -65,7 +65,7 @@ const App = () => {
                 path="/task"
                 element={
                   <Suspense fallback={<div>Loading...</div>}>
-                    <TaskApp />
+                    <TaskApp text="from host" />
                   </Suspense>
                 }
               />

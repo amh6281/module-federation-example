@@ -1,4 +1,4 @@
-const App = () => {
+const App = ({ text }: { text?: string }) => {
   return (
     <div
       style={{
@@ -9,7 +9,7 @@ const App = () => {
       }}
     >
       <h1 style={{ marginBottom: "1rem", color: "#1f2937" }}>
-        Welcome to Task
+        Welcome to Task {text}
       </h1>
       <p style={{ color: "#4b5563", lineHeight: "1.6" }}>
         This is the Task page of our micro-frontend application.
