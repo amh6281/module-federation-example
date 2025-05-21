@@ -1,24 +1,9 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navigation from "./components/Navigation";
+import Home from "./components/Home";
 
 const TaskApp = lazy(() => import("task/TaskApp"));
-
-const Home = () => (
-  <div
-    style={{
-      backgroundColor: "#ffffff",
-      padding: "2rem",
-      borderRadius: "0.5rem",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    }}
-  >
-    <h1 style={{ marginBottom: "1rem", color: "#1f2937" }}>Welcome to Home</h1>
-    <p style={{ color: "#4b5563", lineHeight: "1.6" }}>
-      This is the home page of our micro-frontend application.
-    </p>
-  </div>
-);
 
 const App = () => {
   return (
@@ -37,7 +22,6 @@ const App = () => {
             padding: "0 1rem",
           }}
         >
-          {/* <TwoButtonComponent /> */}
           <Suspense
             fallback={
               <div
