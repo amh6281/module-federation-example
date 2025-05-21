@@ -46,6 +46,19 @@ const Navigation = () => {
         >
           Task
         </Link>
+        <Link
+          to="/reservation"
+          style={{
+            textDecoration: "none",
+            color: location.pathname === "/reservation" ? "#2563eb" : "#4b5563",
+            fontWeight: location.pathname === "/reservation" ? "600" : "400",
+            padding: "0.5rem 1rem",
+            borderRadius: "0.375rem",
+            transition: "all 0.2s",
+          }}
+        >
+          Reservation
+        </Link>
       </div>
     </nav>
   );

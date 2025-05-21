@@ -2,8 +2,13 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navigation from "./components/Navigation";
 import Home from "./components/Home";
+import "@mailplug-inc/design-system/dist/assets/style.css";
+import { Gnb, Header } from "@mailplug-inc/design-system";
 
 const TaskApp = lazy(() => import("task/TaskApp"));
+const ReserveButton = lazy(() => import("reserve/ReserveButton"));
+const ReserveNumberCircle = lazy(() => import("reserve/ReserveNumberCircle"));
+const ReserveTwoButton = lazy(() => import("reserve/ReserveTwoButton"));
 
 const App = () => {
   return (
@@ -11,7 +16,6 @@ const App = () => {
       <div
         style={{
           minHeight: "100vh",
-          backgroundColor: "#f5f5f5",
         }}
       >
         <Navigation />
@@ -50,6 +54,16 @@ const App = () => {
                 element={
                   <Suspense fallback={<div>Loading...</div>}>
                     <TaskApp text="from host" />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/reservation"
+                element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ReserveButton />
+                    <ReserveNumberCircle />
+                    <ReserveTwoButton onConfirm={() => alert("confirm")} />
                   </Suspense>
                 }
               />
