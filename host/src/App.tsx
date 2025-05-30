@@ -1,5 +1,9 @@
+import { lazy } from "react";
+
+const TanstackApp = lazy(() => import("remote/TanstackApp"));
+
 const App = () => {
-  return <div>App</div>;
+  return <TanstackApp />;
 };
 
 export default App;
