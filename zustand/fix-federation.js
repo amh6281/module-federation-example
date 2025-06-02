@@ -1,3 +1,5 @@
+// TODO: fix-react-injection.js에서 try/catch 제거?
+
 import fs from "fs";
 import path from "path";
 
