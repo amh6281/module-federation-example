@@ -11,30 +11,7 @@ export default defineConfig({
       remotes: {
         zustand: "http://localhost:3001/dist/assets/zustandRemoteEntry.js",
       },
-      shared: {
-        react: {
-          import: true,
-          requiredVersion: "19.1.0",
-          version: "19.1.0",
-          generate: true,
-          modulePreload: true,
-        },
-        "react-dom": {
-          import: true,
-          requiredVersion: "19.1.0",
-          version: "19.1.0",
-          generate: true,
-          modulePreload: true,
-        },
-        "use-sync-external-store": {
-          import: true,
-          requiredVersion: "1.5.0",
-          version: "1.5.0",
-          generate: true,
-          modulePreload: true,
-        },
-      },
-      shareScope: "default",
+      shared: ["react", "react-dom"],
     }),
   ],
   build: {
