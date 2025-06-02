@@ -14,13 +14,24 @@ export default defineConfig({
       shared: {
         react: {
           import: true,
-          requiredVersion: "18.2.0",
-          version: "18.2.0",
+          requiredVersion: "19.1.0",
+          version: "19.1.0",
+          generate: true,
+          modulePreload: true,
         },
         "react-dom": {
           import: true,
-          requiredVersion: "18.2.0",
-          version: "18.2.0",
+          requiredVersion: "19.1.0",
+          version: "19.1.0",
+          generate: true,
+          modulePreload: true,
+        },
+        "use-sync-external-store": {
+          import: true,
+          requiredVersion: "1.5.0",
+          version: "1.5.0",
+          generate: true,
+          modulePreload: true,
         },
       },
       shareScope: "default",

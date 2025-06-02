@@ -1,9 +1,13 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 
 const ZustandApp = lazy(() => import("zustand/ZustandApp"));
 
 const App = () => {
-  return <ZustandApp />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ZustandApp />
+    </Suspense>
+  );
 };
 
 export default App;
