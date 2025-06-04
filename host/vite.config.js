@@ -11,7 +11,7 @@ export default defineConfig({
       remotes: {
         zustand: "http://localhost:4173/assets/zustandRemoteEntry.js",
       },
-      shared: ["react", "react-dom"],
+      shared: ["react", "react-dom", "zustand", "zustand/traditional"],
     }),
   ],
   build: {

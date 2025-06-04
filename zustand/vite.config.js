@@ -12,7 +12,7 @@ export default defineConfig({
       exposes: {
         "./ZustandApp": "./src/App.jsx",
       },
-      shared: ["react", "react-dom", "zustand"],
+      shared: ["react", "react-dom", "zustand", "zustand/traditional"],
       shareScope: "default",
     }),
   ],

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "vite --port 3001",
-    "build": "vite build && node fix-react-injection.js",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
