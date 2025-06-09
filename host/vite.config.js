@@ -9,7 +9,7 @@ export default defineConfig({
     federation({
       name: "host",
       remotes: {
-        zustand: "http://localhost:4173/assets/zustandRemoteEntry.js",
+        zustand: "http://localhost:4174/assets/zustandRemoteEntry.js",
       },
       shared: ["react", "react-dom", "zustand", "zustand/traditional"],
     }),

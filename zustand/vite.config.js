@@ -11,6 +11,7 @@ export default defineConfig({
       filename: "zustandRemoteEntry.js",
       exposes: {
         "./ZustandApp": "./src/App.jsx",
+        "./useCount": "./src/store/useCount.js",
       },
       shared: ["react", "react-dom", "zustand", "zustand/traditional"],
       shareScope: "default",
