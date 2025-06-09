@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
-// import { useCount } from "zustand/useCount";
 
 const ZustandApp = lazy(() => import("zustand/ZustandApp"));
-
+const useCount = () => lazy(() => import("zustand/useCount"));
 const App = () => {
-  // const { count, increment, decrement } = useCount();
+  const { count, increment, decrement } = useCount();
+  console.log(count);
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <ZustandApp />
