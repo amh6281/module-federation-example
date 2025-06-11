@@ -11,7 +11,9 @@ export default defineConfig({
       filename: "remoteEntry.js",
       exposes: {
         "./App": "./src/App.jsx",
-        "./useCount": "./src/store/useCount.js",
+      },
+      remotes: {
+        host: "http://localhost:4177/assets/hostEntry.js",
       },
       shared: ["react", "react-dom", "zustand"],
     }),

@@ -1,26 +1,26 @@
-import React from "react";
-import { lazy, Suspense } from "react";
-import { Link, BrowserRouter, Routes, Route } from "react-router-dom";
-import { useCount } from "remote/useCount";
+import React, { lazy, Suspense } from "react";
+import { useCount } from "./count";
 
 const RemoteApp = lazy(() => import("remote/App"));
 
 const App = () => {
-  const { count, increment, decrement } = useCount();
-  console.log(count);
+  const { count, increment } = useCount();
   return (
-    <BrowserRouter>
+    <div className="text-3xl mx-auto max-w-6xl">
+      <div>Name: host</div>
+      <div>Count: {count}</div>
       <div>
-        <Link to="/">Home</Link>
-        <Link style={{ marginLeft: "30px" }} to="/remote">
-          remote
-        </Link>
-        <Routes>
-          <Route path="/" element={<div>{count}</div>} />
-          <Route path="/remote" element={<RemoteApp />} />
-        </Routes>
+        <button
+          onClick={increment}
+          className="bg-indigo-800 text-white font-bold py-2 px-4 rounded"
+        >
+          Add To Cart
+        </button>
       </div>
-    </BrowserRouter>
+      <Suspense fallback={<div>Loading...</div>}>
+        <RemoteApp />
+      </Suspense>
+    </div>
   );
 };
 

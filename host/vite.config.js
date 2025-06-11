@@ -10,9 +10,19 @@ export default defineConfig({
       name: "host",
       filename: "hostEntry.js",
       remotes: {
-        remote: "http://localhost:3001/dist/assets/remoteEntry.js",
+        remote: "http://localhost:4176/assets/remoteEntry.js",
+      },
+      exposes: {
+        "./useCount": "./src/count.js",
       },
       shared: ["react", "react-dom"],
     }),
   ],
+  build: {
+    sourcemap: true,
+    target: "esnext",
+    minify: false,
+    cssCodeSplit: false,
+    modulePreload: false,
+  },
 });
