@@ -12,10 +12,7 @@ export default defineConfig({
       exposes: {
         "./App": "./src/App.jsx",
       },
-      remotes: {
-        host: "http://localhost:4177/assets/hostEntry.js",
-      },
-      shared: ["react", "react-dom", "zustand"],
+      shared: ["react", "react-dom"],
     }),
   ],
   build: {
