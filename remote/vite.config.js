@@ -14,6 +14,21 @@ export default defineConfig({
       },
       shared: ["react", "react-dom"],
     }),
+    {
+      name: "vite-plugin-notify-host-on-rebuild",
+      apply(config, { command }) {
+        return Boolean(command === "build" && config.build?.watch);
+      },
+      async buildEnd(error) {
+        if (!error) {
+          try {
+            await fetch("http://localhost:3000/__fullReload");
+          } catch (e) {
+            console.log(e);
+          }
+        }
+      },
+    },
   ],
   build: {
     target: "esnext",

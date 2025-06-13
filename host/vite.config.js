@@ -14,6 +14,20 @@ export default defineConfig({
       },
       shared: ["react", "react-dom"],
     }),
+    {
+      name: "vite-plugin-reload-endpoint",
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url === "/__fullReload") {
+            server.hot.send({ type: "full-reload" });
+
+            res.end("Full reload triggered");
+          } else {
+            next();
+          }
+        });
+      },
+    },
   ],
   build: {
     sourcemap: true,
