@@ -10,24 +10,24 @@ export default defineConfig({
       name: "host",
       filename: "hostEntry.js",
       remotes: {
-        remote: "http://localhost:3001/assets/remoteEntry.js",
+        remote: "http://localhost:3001/dist/assets/remoteEntry.js",
       },
       shared: ["react", "react-dom"],
     }),
-    {
-      name: "vite-plugin-reload-endpoint",
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (req.url === "/__fullReload") {
-            server.hot.send({ type: "full-reload" });
+    // {
+    //   name: "vite-plugin-reload-endpoint",
+    //   configureServer(server) {
+    //     server.middlewares.use((req, res, next) => {
+    //       if (req.url === "/__fullReload") {
+    //         server.hot.send({ type: "full-reload" });
 
-            res.end("Full reload triggered");
-          } else {
-            next();
-          }
-        });
-      },
-    },
+    //         res.end("Full reload triggered");
+    //       } else {
+    //         next();
+    //       }
+    //     });
+    //   },
+    // },
   ],
   build: {
     sourcemap: true,

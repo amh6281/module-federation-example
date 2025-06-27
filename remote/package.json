@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "vite --port 3001",
-    "build": "concurrently \"vite build --watch\" \"vite preview --port 3001 --strictPort\"",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

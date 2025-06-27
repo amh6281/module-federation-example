@@ -1,4 +1,5 @@
 import React, { lazy } from "react";
+import "./global.css";
 
 const RemoteApp = lazy(() => import("remote/App"));
 

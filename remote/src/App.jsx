@@ -1,10 +1,10 @@
 import React from "react";
+import "./global.css";
 
 const App = () => {
-  console.log("test commit");
   return (
     <div>
-      <h1>Remote Aaaapp</h1>
+      <h1>Remaaote Aaaapdddp</h1>
     </div>
   );
 };
