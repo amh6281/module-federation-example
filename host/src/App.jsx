@@ -7,6 +7,7 @@ const App = () => {
   return (
     <div style={{ width: "100%", height: "50px", border: "1px solid red" }}>
       <RemoteApp />
+      <h2 className="hello">Hello World</h2>
     </div>
   );
 };
