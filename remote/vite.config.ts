@@ -11,6 +11,7 @@ export default defineConfig({
       filename: "remoteEntry.js",
       exposes: {
         "./Button": "./src/components/Button.tsx",
+        "./Modal": "./src/components/Modal.tsx",
       },
       shared: ["react", "react-dom"],
     }),
