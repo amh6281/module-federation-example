@@ -1,17 +1,10 @@
-import { lazy } from "react";
+import React from "react";
 
-const RemoteApp = lazy(() => import("remote/RemoteApp"));
+const RemoteApp = React.lazy(() => import("remote/RemoteApp"));
 
 const App = () => {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-        width: "200px",
-      }}
-    >
+    <div>
       <RemoteApp />
     </div>
   );

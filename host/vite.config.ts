@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import federation from "@originjs/vite-plugin-federation";
+import { federation } from "@module-federation/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,7 +10,7 @@ export default defineConfig({
       name: "host",
       filename: "hostEntry.js",
       remotes: {
-        remote: "http://localhost:4001/assets/remoteEntry.js",
+        remote: "http://localhost:4001/remoteEntry.js",
       },
       shared: ["react", "react-dom"],
     }),
