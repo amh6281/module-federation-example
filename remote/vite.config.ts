@@ -12,7 +12,10 @@ export default defineConfig({
       exposes: {
         "./RemoteApp": "./src/App.tsx",
       },
-      shared: ["react", "react-dom"],
+      shared: {
+        react: { singleton: true },
+        "react-dom": { singleton: true },
+      },
     }),
   ],
 });

@@ -8,11 +8,20 @@ export default defineConfig({
     react(),
     federation({
       name: "host",
-      filename: "hostEntry.js",
       remotes: {
-        remote: "http://localhost:4001/remoteEntry.js",
+        remote: {
+          type: "module",
+          name: "remote",
+          entry: "http://localhost:4002/remoteEntry.js",
+          entryGlobalName: "remote",
+          shareScope: "default",
+        },
       },
-      shared: ["react", "react-dom"],
+      filename: "remoteEntry.js",
+      shared: {
+        react: { singleton: true },
+        "react-dom": { singleton: true },
+      },
     }),
   ],
 });
