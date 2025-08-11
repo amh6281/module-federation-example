@@ -1,6 +1,6 @@
 import { lazy } from "react";
 
-const Button = lazy(() => import("remote/Button"));
+const RemoteApp = lazy(() => import("remote/RemoteApp"));
 
 const App = () => {
   return (
@@ -12,10 +12,7 @@ const App = () => {
         width: "200px",
       }}
     >
-      <span style={{ fontSize: "20px", fontWeight: "bold" }}>
-        Remote Button
-      </span>
-      <Button />
+      <RemoteApp />
     </div>
   );
 };
