@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     federation({
       name: "host",
+      filename: "hostEntry.js",
       remotes: {
         remote: {
           type: "module",
@@ -17,7 +18,6 @@ export default defineConfig({
           shareScope: "default",
         },
       },
-      filename: "remoteEntry.js",
       shared: {
         react: { singleton: true, requiredVersion: "18.2.0" },
         "react-dom": { singleton: true, requiredVersion: "18.2.0" },
