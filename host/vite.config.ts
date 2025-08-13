@@ -12,15 +12,15 @@ export default defineConfig({
         remote: {
           type: "module",
           name: "remote",
-          entry: "http://localhost:4002/remoteEntry.js",
+          entry: "http://localhost:4001/remote/remoteEntry.js",
           entryGlobalName: "remote",
           shareScope: "default",
         },
       },
       filename: "remoteEntry.js",
       shared: {
-        react: { singleton: true },
-        "react-dom": { singleton: true },
+        react: { singleton: true, requiredVersion: "18.2.0" },
+        "react-dom": { singleton: true, requiredVersion: "18.2.0" },
       },
     }),
   ],
