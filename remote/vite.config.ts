@@ -7,6 +7,20 @@ export default defineConfig({
   base: "http://localhost:4001/remote/",
   build: {
     target: "chrome89",
+    rollupOptions: {
+      output: {
+        format: "es",
+        manualChunks(id: string) {
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/")
+          ) {
+            return "@react-vendor";
+          }
+          return null;
+        },
+      },
+    },
   },
   plugins: [
     react(),
