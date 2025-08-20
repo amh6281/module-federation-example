@@ -1,5 +1,6 @@
 import { useCountStore } from "./store/useCount";
 import DnD from "./DnD";
+import "./global.css";
 
 const App = () => {
   const { count, increment, decrement } = useCountStore();
