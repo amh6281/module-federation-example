@@ -5,6 +5,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import "./global.css";
 
 interface Task {
   id: string;
