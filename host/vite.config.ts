@@ -5,7 +5,7 @@ import { federation } from "@module-federation/vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    react({ reactRefreshHost: "http://localhost:3000" }),
     federation({
       name: "host",
       filename: "hostEntry.js",
@@ -19,8 +19,16 @@ export default defineConfig({
         },
       },
       shared: {
-        react: { singleton: true, requiredVersion: "18.2.0" },
-        "react-dom": { singleton: true, requiredVersion: "18.2.0" },
+        react: {
+          singleton: true,
+          requiredVersion: "18.2.0",
+          version: "18.2.0",
+        },
+        "react-dom": {
+          singleton: true,
+          requiredVersion: "18.2.0",
+          version: "18.2.0",
+        },
       },
     }),
   ],
