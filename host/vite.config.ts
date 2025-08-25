@@ -4,8 +4,14 @@ import { federation } from "@module-federation/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    hmr: {
+      port: 3000,
+      host: "localhost",
+    },
+  },
   plugins: [
-    react({ reactRefreshHost: "http://localhost:3000" }),
+    react(),
     federation({
       name: "host",
       filename: "hostEntry.js",
