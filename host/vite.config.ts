@@ -9,6 +9,13 @@ export default defineConfig({
       port: 3000,
       host: "localhost",
     },
+    proxy: {
+      "/@mf-types.zip": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        rewrite: () => `/@fs/${process.cwd()}/dist/@mf-types`,
+      },
+    },
   },
   plugins: [
     react(),
