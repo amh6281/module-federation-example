@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { federation } from "@module-federation/vite";
-import dts from "vite-plugin-dts";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,21 +15,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    dts({
-      outDir: "dist/@mf-types",
-      include: ["src/App.tsx"],
-      insertTypesEntry: true,
-      staticImport: true,
-      rollupTypes: false,
-      copyDtsFiles: false,
-      tsconfigPath: "./tsconfig.app.json",
-      compilerOptions: {
-        declaration: true,
-        emitDeclarationOnly: true,
-        skipLibCheck: true,
-      },
-      exclude: ["src/DnD.tsx"],
-    }),
     federation({
       name: "remote",
       filename: "remoteEntry.js",
