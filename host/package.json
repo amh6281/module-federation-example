@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "vite --port 3000",
-    "build": "tsc -b && vite build",
+    "prebuild": "mkdir -p types && curl -o ./types/remote-types.d.ts http://localhost:4001/remote/dist/@mf-types/App.d.ts",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview --port 4000"
   },
