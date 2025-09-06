@@ -37,6 +37,7 @@ export default defineConfig({
       exposes: {
         "./RemoteApp": "./src/App.tsx",
       },
+      shareStrategy: "loaded-first",
       shared: {
         react: {
           singleton: true,

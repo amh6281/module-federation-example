@@ -24,6 +24,7 @@ export default defineConfig({
           shareScope: "default",
         },
       },
+      shareStrategy: "loaded-first",
       shared: {
         react: {
           singleton: true,
