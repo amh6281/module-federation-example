@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "vite --port 3000",
-    "prebuild": "mkdir -p types && curl -o ./types/remote-types.d.ts http://localhost:4001/remote/dist/@mf-types/App.d.ts",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview --port 4000"
+    "preview": "vite preview --port 4000",
+    "sync-types": "mkdir -p src/@types/mf-types && curl -L http://localhost:4001/remote/mf-types.tar.gz | tar -xzf - -C src/@types/mf-types"
   },
   "dependencies": {
     "@module-federation/vite": "^1.7.1",
