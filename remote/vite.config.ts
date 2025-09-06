@@ -2,6 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { federation } from "@module-federation/vite";
 import dts from "vite-plugin-dts";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,7 +21,7 @@ export default defineConfig({
   plugins: [
     react(),
     dts({
-      outDir: "dist/@mf-types",
+      outDir: "dist/mf-types",
       include: ["src/App.tsx"],
       insertTypesEntry: true,
       staticImport: true,
@@ -29,6 +33,16 @@ export default defineConfig({
         emitDeclarationOnly: true,
         skipLibCheck: true,
       },
+      afterBuild: async () => {
+        const typesDir = `dist/mf-types`;
+        const tarPath = `dist/mf-types.tar.gz`;
+
+        // tar 압축 후 원본 폴더 삭제
+        await execAsync(
+          `tar -czf "${tarPath}" -C "${typesDir}" . && rm -rf "${typesDir}"`
+        );
+      },
+
       exclude: ["src/DnD.tsx"],
     }),
     federation({
