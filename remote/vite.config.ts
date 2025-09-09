@@ -19,6 +19,8 @@ export default defineConfig({
     dts({
       outDir: "dist/mf-types",
       tsconfigPath: "./tsconfig.app.json",
+      include: ["src/@types/*.d.ts"],
+      copyDtsFiles: true,
     }),
     federation({
       name: "remote",
