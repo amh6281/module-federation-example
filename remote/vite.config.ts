@@ -17,10 +17,11 @@ export default defineConfig({
   plugins: [
     react(),
     dts({
-      outDir: "dist/mf-types",
+      outDir: "dist/assets",
       tsconfigPath: "./tsconfig.app.json",
-      include: ["src/@types/*.d.ts"],
-      copyDtsFiles: true,
+      bundledPackages: ["zustand", "zustand/traditional"],
+      clearPureImport: false,
+      include: ["src/store/useCount.ts"],
     }),
     federation({
       name: "remote",

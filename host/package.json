@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview --port 4000",
-    "sync-types": "mkdir -p src/@types && curl -o ./src/@types/declaration.d.ts http://localhost:4001/remote/mf-types/RemoteApp.d.ts"
+    "type": "mkdir -p src/@types && curl -o ./src/@types/declaration.d.ts http://localhost:4001/remote/assets/useCount.d.ts"
   },
   "dependencies": {
     "@module-federation/vite": "^1.7.1",
