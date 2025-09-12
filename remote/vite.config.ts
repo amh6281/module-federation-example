@@ -18,10 +18,11 @@ export default defineConfig({
     react(),
     dts({
       outDir: "dist/assets",
+      entryRoot: ".",
       tsconfigPath: "./tsconfig.app.json",
-      bundledPackages: ["zustand", "zustand/traditional"],
-      clearPureImport: false,
-      include: ["src/store/useCount.ts"],
+      copyDtsFiles: true,
+      include: ["node_modules", "src"],
+      exclude: ["src/**/*.test.*", "src/**/*.spec.*"],
     }),
     federation({
       name: "remote",
