@@ -17,12 +17,25 @@ export default defineConfig({
   plugins: [
     react(),
     dts({
-      outDir: "dist/assets",
-      entryRoot: ".",
+      outDir: "dist",
       tsconfigPath: "./tsconfig.app.json",
-      copyDtsFiles: true,
-      include: ["node_modules", "src"],
-      exclude: ["src/**/*.test.*", "src/**/*.spec.*"],
+      include: ["src/store/useCount.ts"],
+      aliasesExclude: ["zustand", "zustand/traditional"],
+      resolvers: [
+        {
+          name: "declare-module-resolver",
+          supports: (id) => id.includes("useCount"),
+          transform: (payload) => {
+            console.log(payload);
+            return [
+              {
+                path: "useCount.d.ts",
+                content: `declare module 'remote/useCount' ${payload.code}`,
+              },
+            ];
+          },
+        },
+      ],
     }),
     federation({
       name: "remote",
