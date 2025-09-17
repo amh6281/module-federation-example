@@ -19,23 +19,7 @@ export default defineConfig({
     dts({
       outDir: "dist",
       tsconfigPath: "./tsconfig.app.json",
-      include: ["src/store/useCount.ts"],
-      aliasesExclude: ["zustand", "zustand/traditional"],
-      resolvers: [
-        {
-          name: "declare-module-resolver",
-          supports: (id) => id.includes("useCount"),
-          transform: (payload) => {
-            console.log(payload);
-            return [
-              {
-                path: "useCount.d.ts",
-                content: `declare module 'remote/useCount' ${payload.code}`,
-              },
-            ];
-          },
-        },
-      ],
+      include: ["src/App.tsx"],
     }),
     federation({
       name: "remote",
