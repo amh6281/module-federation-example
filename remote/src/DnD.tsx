@@ -34,44 +34,18 @@ const DnD = () => {
   };
 
   return (
-    <div
-      style={{
-        padding: "20px",
-        maxWidth: "500px",
-        margin: "0 auto",
-        backgroundColor: "#f8f9fa",
-        borderRadius: "12px",
-        border: "2px solid #e9ecef",
-      }}
-    >
-      <h2
-        style={{
-          textAlign: "center",
-          marginBottom: "20px",
-          color: "#495057",
-          fontSize: "24px",
-        }}
-      >
+    <div className="p-5 max-w-[500px] m-auto bg-gray-100 rounded-lg border-2 border-gray-300">
+      <h2 className="text-center mb-5 text-gray-600 text-2xl">
         🎯 할 일 목록 (드래그로 순서 변경)
       </h2>
 
       <DragDropContext onDragEnd={handleOnDragEnd}>
         <Droppable droppableId="tasks">
-          {(provided, snapshot) => (
+          {(provided) => (
             <ul
               {...provided.droppableProps}
               ref={provided.innerRef}
-              style={{
-                listStyle: "none",
-                padding: 0,
-                margin: 0,
-                backgroundColor: snapshot.isDraggingOver
-                  ? "#e3f2fd"
-                  : "transparent",
-                borderRadius: "8px",
-                minHeight: "300px",
-                transition: "background-color 0.2s ease",
-              }}
+              className="list-none p-0 m-0 bg-transparent rounded-8px min-h-[300px] transition-background-color 0.2s ease"
             >
               {tasks.map((task, index) => (
                 <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -120,17 +94,7 @@ const DnD = () => {
         </Droppable>
       </DragDropContext>
 
-      <div
-        style={{
-          marginTop: "20px",
-          padding: "12px",
-          backgroundColor: "#d1ecf1",
-          borderRadius: "6px",
-          fontSize: "14px",
-          color: "#0c5460",
-          textAlign: "center",
-        }}
-      >
+      <div className="mt-5 p-3 bg-cyan-100 rounded-6px text-sm text-cyan-800 text-center">
         💡 팁: 항목을 드래그해서 순서를 변경해보세요!
       </div>
     </div>
