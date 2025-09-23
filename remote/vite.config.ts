@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { federation } from "@module-federation/vite";
 import dts from "vite-plugin-dts";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,6 +17,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    tailwindcss(),
     dts({
       outDir: "dist",
       tsconfigPath: "./tsconfig.app.json",

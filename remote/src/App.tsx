@@ -1,49 +1,27 @@
 import { useCountStore } from "./store/useCount";
 import DnD from "./DnD";
+import "./global.css";
 
 const App = () => {
   const { count, increment, decrement } = useCountStore();
 
   return (
-    <div
-      style={{
-        border: "2px solid blue",
-        padding: "20px",
-        margin: "10px",
-        borderRadius: "8px",
-        backgroundColor: "#f0f8ff",
-      }}
-    >
+    <div className="border-2 border-blue-500 p-4 m-2 rounded-lg bg-blue-50">
       <h2>🚀 Remote Application</h2>
 
       {/* Zustand Counter */}
-      <div style={{ marginBottom: "30px" }}>
+      <div className="mb-7.5">
         <h3>📊 Zustand Counter</h3>
         <p>Count: {count}</p>
         <button
           onClick={increment}
-          style={{
-            marginRight: "10px",
-            padding: "8px 16px",
-            backgroundColor: "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
+          className="mr-2.5 py-2 px-4 bg-green-500 text-white border-none rounded-md cursor-pointer"
         >
           +
         </button>
         <button
           onClick={decrement}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#f44336",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
+          className="py-2 px-4 bg-red-500 text-white border-none rounded-md cursor-pointer"
         >
           -
         </button>
