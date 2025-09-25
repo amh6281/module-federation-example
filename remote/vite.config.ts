@@ -21,7 +21,7 @@ export default defineConfig({
     dts({
       outDir: "dist",
       tsconfigPath: "./tsconfig.app.json",
-      include: ["src/App.tsx"],
+      include: ["src/**/*"],
     }),
     federation({
       name: "remote",
