@@ -3,28 +3,28 @@
 
     const importMap = {
       
-        "react": async () => {
-          let pkg = await import("__mf__virtual/remote__prebuild__react__prebuild__.js")
+        "react-dom": async () => {
+          let pkg = await import("__mf__virtual/remote__prebuild__react_mf_2_dom__prebuild__.js")
           return pkg
         }
       ,
-        "react-dom": async () => {
-          let pkg = await import("__mf__virtual/remote__prebuild__react_mf_2_dom__prebuild__.js")
+        "react": async () => {
+          let pkg = await import("__mf__virtual/remote__prebuild__react__prebuild__.js")
           return pkg
         }
       
     }
       const usedShared = {
       
-          "react": {
-            name: "react",
+          "react-dom": {
+            name: "react-dom",
             version: "18.2.0",
             scope: ["default"],
             loaded: false,
             from: "remote",
             async get () {
-              usedShared["react"].loaded = true
-              const {"react": pkgDynamicImport} = importMap 
+              usedShared["react-dom"].loaded = true
+              const {"react-dom": pkgDynamicImport} = importMap 
               const res = await pkgDynamicImport()
               const exportModule = {...res}
               // All npm packages pre-built by vite will be converted to esm
@@ -42,15 +42,15 @@
             }
           }
         ,
-          "react-dom": {
-            name: "react-dom",
+          "react": {
+            name: "react",
             version: "18.2.0",
             scope: ["default"],
             loaded: false,
             from: "remote",
             async get () {
-              usedShared["react-dom"].loaded = true
-              const {"react-dom": pkgDynamicImport} = importMap 
+              usedShared["react"].loaded = true
+              const {"react": pkgDynamicImport} = importMap 
               const res = await pkgDynamicImport()
               const exportModule = {...res}
               // All npm packages pre-built by vite will be converted to esm
