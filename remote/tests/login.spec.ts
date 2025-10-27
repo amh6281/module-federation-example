@@ -1,19 +1,20 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Login Test", () => {
-  test("should log in with valid credentials", async ({ page }) => {
-    // 1. 페이지 이동
-    await page.goto("https://example.com/login");
+test.describe("Remote App Test", () => {
+  test("should display remote application", async ({ page }) => {
+    // 1. 페이지 이동 (baseURL 자동 적용: http://localhost:4001/)
+    await page.goto("/");
 
-    // 2. 이메일 및 비밀번호 입력
-    await page.fill('input[name="email"]', "test@example.com");
-    await page.fill('input[name="password"]', "password123");
+    // 2. 앱 제목 확인
+    await expect(page.locator("div")).toContainText("App Test");
 
-    // 3. 로그인 버튼 클릭
-    await page.click('button[type="submit"]');
+    // 3. 카운터 기능 테스트
+    await expect(page.locator("text=Count:")).toBeVisible();
 
-    // 4. 로그인 성공 확인
-    await expect(page).toHaveURL("https://example.com/dashboard"); // 로그인 성공 후 이동할 URL
-    await expect(page.locator("text=Welcome")).toBeVisible(); // 로그인 후 보이는 특정 텍스트 확인
+    // 4. 증가 버튼 클릭
+    await page.click('button:has-text("+")');
+
+    // 5. 카운트 증가 확인
+    await expect(page.locator("text=Count: 1")).toBeVisible();
   });
 });

@@ -6,6 +6,6 @@ export default defineConfig({
   retries: 1,
   use: {
     headless: true, // GUI 표시 여부
-    baseURL: "https://example.com",
+    baseURL: "http://localhost:3001", // remote 앱 URL
   },
 });
