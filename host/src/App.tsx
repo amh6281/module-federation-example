@@ -5,7 +5,7 @@ import "./index.css";
 const App = () => {
   return (
     <div>
-      <h1 className="bg-red-500">Host Application</h1>
+      <h1 className="bg-red-500">Host Applisscation</h1>
 
       {/* <Suspense fallback={<div>Loading Remote App...</div>}>
         <RemoteApp />
