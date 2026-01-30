@@ -37,6 +37,10 @@ export default defineConfig({
           version: "18.2.0",
         },
       },
+      // localhost:3000 ↔ localhost:4001 CORS 이슈
+      ignoreOrigin: true,
+      // remote 파싱 타임아웃(초). 기본 10초, 느린 환경에서 증가
+      moduleParseTimeout: 30,
     }),
   ],
 });
