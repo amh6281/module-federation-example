@@ -1,5 +1,9 @@
+import { lazy } from "react";
+
+const RemoteApp = lazy(() => import("remote/RemoteApp"));
+
 const App = () => {
-  return <div>Host App</div>;
+  return <RemoteApp />;
 };
 
 export default App;

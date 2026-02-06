@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+remote/.__mf__temp
+host/.__mf__temp
