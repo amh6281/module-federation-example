@@ -36,12 +36,6 @@ export default defineConfig({
           version: "18.2.0",
         },
       },
-      // remote 타입 생성 → host가 consumeTypes로 가져감
-      dts: {
-        generateTypes: true,
-        tsConfigPath: "./tsconfig.app.json",
-        displayErrorInTerminal: true,
-      },
     }),
   ],
 });
