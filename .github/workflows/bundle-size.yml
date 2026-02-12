@@ -1,0 +1,30 @@
+# .github/workflows/bundle-size.yml
+name: Check Bundle Size
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pnpm-lock.yaml'
+      - 'yarn.lock'
+
+jobs:
+  check-bundle-size:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check package size with Bundlephobia
+        uses: carlesnunez/check-bundlephobia@v1
+        with:
+          # 개별 패키지 크기 임계값 (기본: 100kb)
+          threshold: '100kb'
+          # 전체 번들 크기 임계값 (선택)
+          total_threshold: '500kb'
+          # package.json 경로 (기본: ./package.json)
+          package_json_path: './package.json'
