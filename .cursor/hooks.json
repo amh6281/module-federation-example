@@ -1,16 +1,6 @@
 {
   "version": 1,
   "hooks": {
-    "beforeShellExecution": [
-      {
-        "command": "./.cursor/hooks/test-hook.sh"
-      }
-    ],
-    "afterFileEdit": [
-      {
-        "command": "./.cursor/hooks/test-hook.sh"
-      }
-    ],
     "stop": [
       {
         "command": "./.cursor/hooks/test-hook.sh"
