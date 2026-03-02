@@ -1,10 +1,10 @@
-{
-  "version": 1,
-  "hooks": {
-    "stop": [
-      {
-        "command": "./.cursor/hooks/test-hook.sh"
-      }
-    ]
-  }
-}
+// {
+//   "version": 1,
+//   "hooks": {
+//     "stop": [
+//       {
+//         "command": "./.cursor/hooks/test-hook.sh"
+//       }
+//     ]
+//   }
+// }
