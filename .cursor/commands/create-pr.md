@@ -87,7 +87,24 @@ Chore(TK-450): Cursor rules skills 구조 추가
 
 ## Step 5 — Generate PR Description
 
-Format exactly as below.
+Use `.github/pull_request_template.md` as the source template.
+
+- Load `.github/pull_request_template.md` and keep the same section layout (`Related Issue`, `Summary`, `Checklist`).
+- Fill placeholders from diff analysis and extracted issue number.
+- In Checklist, set exactly one checked item that matches the selected commit type.
+- Do not embed the full template contents inside this command definition.
+
+Allowed commit type to checklist mapping:
+
+- Feat → 새로운 기능 추가
+- Fix → 버그 수정
+- Style → CSS 등 사용자 UI 디자인 변경
+- Refactor → 코드 리팩토링
+- Comment → 주석 추가 및 수정
+- Test → 테스트 추가, 테스트 리팩토링
+- Chore → 빌드 부분 혹은 패키지 매니저 수정
+- Rename → 파일 혹은 폴더명 수정
+- Remove → 파일 혹은 폴더 삭제
 
 ---
 
