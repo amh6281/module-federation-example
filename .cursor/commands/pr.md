@@ -44,18 +44,19 @@ git commit -m "<PR title>"
 git push -u origin HEAD
 
 # 7) Build PR body from .github/pull_request_template.md (order: Related Issue -> Summary -> Checklist)
-# fallback when template missing: 
+# fallback when template missing:
 # ## Summary
 # ## Changes
 
 # 8) Create or update PR and keep PR_NUMBER / PR_URL
 BRANCH=$(git branch --show-current)
 PR_NUMBER=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
+BASE_BRANCH="develop"
 
 if [ -n "$PR_NUMBER" ]; then
-  gh pr edit "$PR_NUMBER" --title "<PR title>" --body "<PR body>"
+  gh pr edit "$PR_NUMBER" --title "<PR title>" --body "<PR body>" --base "$BASE_BRANCH"
 else
-  PR_JSON=$(gh pr create --title "<PR title>" --body "<PR body>" --json number,url)
+  PR_JSON=$(gh pr create --title "<PR title>" --body "<PR body>" --base "$BASE_BRANCH" --json number,url)
   PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
 fi
 
