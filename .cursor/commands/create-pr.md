@@ -115,11 +115,18 @@ After generating the PR title and body, run the following commands sequentially:
 1. `git add -A`
 2. `git commit -m "<PR title>"`
 3. `git push -u origin HEAD`
-4. `gh pr create --title "<PR title>" --body "<PR body>"`
+4. `BRANCH=$(git branch --show-current)`
+5. `EXISTING_PR_NUMBER=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')`
+6. `if [ -n "$EXISTING_PR_NUMBER" ]; then\
+gh pr edit "$EXISTING_PR_NUMBER" --title "<PR title>" --body "<PR body>";\
+gh pr view "$EXISTING_PR_NUMBER" --json url --jq .url;\
+else\
+gh pr create --title "<PR title>" --body "<PR body>";\
+fi`
 
 Rules:
 
 - Execute in order and stop on failure.
 - Do not use interactive git flags.
 - Do not force push.
-- At the end, print the created PR URL.
+- Print the PR URL whether created or updated.
