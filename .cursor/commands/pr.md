@@ -176,41 +176,38 @@ Store result in `PR_URL` and keep it for Step 12 and Step 13.
 
 Failure rule: stop immediately if any command fails.
 
-## Step 12 — Add Type Label
-
 ## Step 12 — Add Labels
 
-Add labels automatically:
+Add labels automatically.
 
-Type label:
+### Type Label (exactly one)
 
-- Feat → feature
-- Fix → bug
-- Refactor → refactor
-- Style → ui
-- Comment → documentation
-- Test → test
-- Chore → chore
-- Init → init
-- Rename → refactor
-- Remove → cleanup
+- Feat → `feature`
+- Fix → `bug`
+- Refactor → `refactor`
+- Style → `ui`
+- Comment → `documentation`
+- Test → `test`
+- Chore → `chore`
+- Init → `init`
+- Rename → `refactor`
+- Remove → `cleanup`
 
-Area label (based on file path):
+### AI Generated Label
 
-- src/modules/api/\*\* → area:api
-- src/components/\*\* → area:ui
-- src/store/\*\* → area:store
+All PRs created by this command must include:
 
-Size label (based on diff lines):
+`cursor-generated`
 
-- 0-50 → size:XS
-- 50-200 → size:S
-- 200-500 → size:M
-- 500+ → size:L
+### Commands
 
 Run:
 
-`gh pr edit "$EXISTING_PR_NUMBER" --add-label "<label>"`
+`gh pr edit "$EXISTING_PR_NUMBER" --add-label "<type-label>"`
+
+Then run:
+
+`gh pr edit "$EXISTING_PR_NUMBER" --add-label "cursor-generated"`
 
 ## Step 13 — Output Result
 
