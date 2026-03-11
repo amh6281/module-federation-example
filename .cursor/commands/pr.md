@@ -209,6 +209,12 @@ Then run:
 
 `gh pr edit "$EXISTING_PR_NUMBER" --add-label "cursor-generated"`
 
+### Assignee
+
+Assign this PR to me:
+
+`gh api -X POST "repos/<OWNER>/<REPO>/issues/$EXISTING_PR_NUMBER/assignees" -f 'assignees[]=@me'`
+
 ## Step 13 — Output Result
 
 Print:
