@@ -4,6 +4,15 @@ description: Analyze git changes, generate a commit and pull request following t
 
 # Automatic Pull Request Creation
 
+## Important Note (Cursor Security)
+
+Cursor may require a manual **Run** approval for commands that modify the repo or access the network (e.g. `git push`, `gh pr create`). This command will therefore:
+
+- Generate the commit title + PR body
+- Execute the git/gh commands automatically (may still prompt for approval)
+
+This aims to minimize manual work while staying within the security model.
+
 ## Step 1 — Analyze Changes
 
 Analyze the current git diff to understand:
@@ -79,3 +88,21 @@ Chore(TK-450): Cursor rules skills 구조 추가
 ## Step 5 — Generate PR Description
 
 Format exactly as below.
+
+---
+
+## Step 6 — Execute Commands Automatically
+
+After generating the PR title and body, run the following commands sequentially:
+
+1. `git add -A`
+2. `git commit -m "<PR title>"`
+3. `git push -u origin HEAD`
+4. `gh pr create --title "<PR title>" --body "<PR body>"`
+
+Rules:
+
+- Execute in order and stop on failure.
+- Do not use interactive git flags.
+- Do not force push.
+- At the end, print the created PR URL.
