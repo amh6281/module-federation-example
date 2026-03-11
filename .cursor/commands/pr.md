@@ -213,7 +213,10 @@ Then run:
 
 Assign this PR to me:
 
-`gh api -X POST "repos/<OWNER>/<REPO>/issues/$EXISTING_PR_NUMBER/assignees" -f 'assignees[]=@me'`
+```bash
+ASSIGNEE_LOGIN=$(gh api user --jq .login)
+gh api -X POST "repos/<OWNER>/<REPO>/issues/$EXISTING_PR_NUMBER/assignees" -f "assignees[]=$ASSIGNEE_LOGIN"
+```
 
 ## Step 13 — Output Result
 
