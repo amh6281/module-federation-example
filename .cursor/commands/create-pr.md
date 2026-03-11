@@ -1,132 +1,227 @@
 ---
-description: Analyze git changes, generate a commit and pull request following the team commit convention, and create the PR automatically.
+description: Generate commit and create a new pull request following the team convention.
 ---
 
-# Automatic Pull Request Creation
+# Create Pull Request
 
-## Important Note (Cursor Security)
+```bash
+set -euo pipefail
 
-Cursor may require a manual **Run** approval for commands that modify the repo or access the network (e.g. `git push`, `gh pr create`). This command will therefore:
+BASE_BRANCH="develop"
+DEFAULT_SUMMARY="작업 반영"
 
-- Generate the commit title + PR body
-- Execute the git/gh commands automatically (may still prompt for approval)
+BRANCH_NAME=$(git branch --show-current)
+ISSUE_NUMBER=$(echo "$BRANCH_NAME" | rg -o "[A-Z]+-[0-9]+" | head -n 1 || true)
+if [ -z "$ISSUE_NUMBER" ]; then
+  echo "Branch name must include an issue number (example TK-1325)"
+  exit 1
+fi
 
-This aims to minimize manual work while staying within the security model.
+HAS_DIFF=false
+if ! (git diff --quiet && git diff --cached --quiet); then
+  HAS_DIFF=true
+fi
 
-## Step 1 — Analyze Changes
+if [ "$HAS_DIFF" = true ]; then
+  DIFF_RAW=$(mktemp)
+  git status --porcelain=v1 > "$DIFF_RAW"
 
-Analyze the current git diff to understand:
+  IS_RENAME=0
+  IS_REMOVE=0
+  HAS_NON_DELETE=0
+  HAS_TEST=0
+  HAS_STYLE=0
+  HAS_COMMENT=0
+  HAS_CHORE=0
+  HAS_FRONTEND=0
+  HAS_FIX_HINT=0
+  HAS_FEAT_HINT=0
 
-- What files changed
-- What functionality changed
-- Whether the change is a feature, fix, refactor, style, etc.
+  while IFS= read -r line; do
+    status=${line%% *}
+    path=${line#?? }
 
----
+    if [[ "$status" == D* ]]; then
+      IS_REMOVE=1
+      continue
+    fi
+    HAS_NON_DELETE=1
 
-## Step 2 — Extract Issue Number
+    if [[ "$status" == R* ]]; then
+      IS_RENAME=1
+    fi
 
-Extract the issue number from the current branch name.
+    case "$path" in
+      *test*|*tests*|*spec*|*_test.*|*.spec.*)
+        HAS_TEST=1 ;;
+      *.css|*.scss|*.sass|*.less|*.styl|*style*)
+        HAS_STYLE=1 ;;
+      *.md|*.mdx|*docs/*|*.markdown)
+        HAS_COMMENT=1 ;;
+      package.json|pnpm-lock.yaml|package-lock.json|yarn.lock|.github/workflows/*|Dockerfile|docker-compose.yml|tsconfig*.json|.editorconfig|.eslintrc*|.prettierrc*)
+        HAS_CHORE=1 ;;
+      src/*|app/*|components/*|pages/*|hooks/*|lib/*|api/*|server/*|client/*|public/*|views/*)
+        HAS_FRONTEND=1 ;;
+      *.js|*.jsx|*.ts|*.tsx|*.vue|*.svelte|*.json|*.yml|*.yaml|*.rb|*.py|*.go|*.java)
+        HAS_FIX_HINT=1 ;;
+    esac
 
-Examples:
+    if rg -qE "TODO|FIXME|BUG|typo|오타|버그" "$path" 2>/dev/null; then
+      HAS_FIX_HINT=1
+    fi
 
-feature/TK-1325-card-delete  
-fix/TK-210-login-error
+    if rg -qE "feat|feature|기능" "$path" 2>/dev/null; then
+      HAS_FEAT_HINT=1
+    fi
+  done < "$DIFF_RAW"
+  rm -f "$DIFF_RAW"
 
-→ Issue number = TK-1325
+  if [ "$IS_REMOVE" -eq 1 ] && [ "$HAS_NON_DELETE" -eq 0 ]; then
+    COMMIT_TYPE="Remove"
+  elif [ "$IS_RENAME" -eq 1 ]; then
+    COMMIT_TYPE="Rename"
+  elif [ "$HAS_TEST" -eq 1 ]; then
+    COMMIT_TYPE="Test"
+  elif [ "$HAS_STYLE" -eq 1 ]; then
+    COMMIT_TYPE="Style"
+  elif [ "$HAS_COMMENT" -eq 1 ]; then
+    COMMIT_TYPE="Comment"
+  elif [ "$HAS_CHORE" -eq 1 ]; then
+    COMMIT_TYPE="Chore"
+  elif [ "$HAS_FIX_HINT" -eq 1 ]; then
+    COMMIT_TYPE="Fix"
+  elif [ "$HAS_FEAT_HINT" -eq 1 ] || printf '%s\n' "$BRANCH_NAME" | rg -q '^feat|^feature|/feat'; then
+    COMMIT_TYPE="Feat"
+  elif [ "$HAS_FRONTEND" -eq 1 ]; then
+    COMMIT_TYPE="Refactor"
+  else
+    COMMIT_TYPE="Chore"
+  fi
 
-Rules:
+  SUMMARY_TEXT="$DEFAULT_SUMMARY"
+  RAW_SUMMARY=$(git diff --name-only | sed 's#^# #;/^$/d' | head -n 5 | tr '\n' ' ' | sed 's/^[[:space:]]*//')
+  if [ -n "$RAW_SUMMARY" ]; then
+    SUMMARY_TEXT="$RAW_SUMMARY"
+  fi
+  SUMMARY_TEXT=$(printf "%s" "$SUMMARY_TEXT" | tr -d '[:punct:]' | sed 's/[[:space:]]\+/ /g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | cut -c1-40)
+  if [ -z "$SUMMARY_TEXT" ]; then
+    SUMMARY_TEXT="변경사항 반영"
+  fi
+else
+  COMMIT_TYPE="Chore"
+  SUMMARY_TEXT="변경사항 없음"
+fi
 
-- Issue number **must exist**
-- If not found, stop and output:
+PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
+if [ ${#PR_TITLE} -gt 50 ]; then
+  PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT:0:$((50-${#COMMIT_TYPE}-${#ISSUE_NUMBER}-3))}"
+fi
 
-Branch name must include an issue number (example TK-1325)
+if [ "$HAS_DIFF" = true ]; then
+  npm run lint
+  npm run type-check
 
----
+  git add -A
+  git commit -m "$PR_TITLE"
+fi
 
-## Step 3 — Determine Commit Type
+PUSH_NEEDED=true
+if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+  read -r BEHIND AHEAD < <(git rev-list --left-right --count @{u}...HEAD)
+  if [ "$AHEAD" -eq 0 ]; then
+    PUSH_NEEDED=false
+  fi
+fi
 
-Select one of the following commit types.
+if [ "$PUSH_NEEDED" = true ]; then
+  git push -u origin HEAD
+fi
 
-Feat: 새로운 기능 추가  
-Fix: 버그 수정 또는 typo  
-Refactor: 리팩토링 코드 구조 개선 기능 변경 없음  
-Style: CSS 등 UI 디자인 변경  
-Comment: 주석 추가 또는 변경  
-Test: 테스트 코드 추가 수정 삭제  
-Chore: 빌드 설정 패키지 assets 변경  
-Init: 프로젝트 초기 생성  
-Rename: 파일 또는 폴더 이름 변경  
-Remove: 파일 삭제 작업
+if [ -f ".github/pull_request_template.md" ]; then
+  TEMPLATE=$(cat .github/pull_request_template.md)
+  if printf '%s' "$TEMPLATE" | rg -q "Related Issue|Summary|Checklist"; then
+    PR_BODY=$(printf "## Related Issue\n\n%s\n\n%s" "$ISSUE_NUMBER" "$TEMPLATE")
+  else
+    PR_BODY="$TEMPLATE"
+  fi
+else
+  PR_BODY=$'## Summary\n\n- 작업 요약\n\n## Changes\n\n- 변경사항 반영'
+fi
 
-Choose the **most representative type**.
+BRANCH_NAME=$(git branch --show-current)
+PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
 
----
+if [ -n "$PR_NUMBER" ]; then
+  gh pr edit "$PR_NUMBER" --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
+else
+  PR_JSON=$(gh pr create --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY" --json number,url)
+  PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.number')
+fi
 
-## Step 4 — Generate Commit Title
+PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
+REPO_OWNER=$(gh repo view --json owner --jq '.owner.login')
+REPO_NAME=$(gh repo view --json name --jq '.name')
+CURRENT_ASSIGNEE=$(gh api user --jq .login)
 
-Format:
+case "$COMMIT_TYPE" in
+  Feat) TYPE_LABEL="feature" ;;
+  Fix) TYPE_LABEL="bug" ;;
+  Refactor) TYPE_LABEL="refactor" ;;
+  Style) TYPE_LABEL="ui" ;;
+  Comment) TYPE_LABEL="documentation" ;;
+  Test) TYPE_LABEL="test" ;;
+  Chore) TYPE_LABEL="chore" ;;
+  Init) TYPE_LABEL="init" ;;
+  Rename) TYPE_LABEL="refactor" ;;
+  Remove) TYPE_LABEL="cleanup" ;;
+  *) TYPE_LABEL="chore" ;;
+esac
 
-<Type>(<IssueNumber>): <한글 요약>
+if ! gh label view "$TYPE_LABEL" >/dev/null 2>&1; then
+  gh label create "$TYPE_LABEL" --color 0e8a16 --description "Auto-created by script" >/dev/null 2>&1 || true
+fi
 
-Rules:
+if ! gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" \
+  --method POST \
+  --input - <<< "$(printf '%s\n' "$TYPE_LABEL" "cursor-generated" | jq -R . | jq -s . | jq -c '{labels: .}')"; then
+  echo "라벨 자동 반영에 실패했습니다. PR 페이지에서 수동으로 ' ${TYPE_LABEL}, cursor-generated ' 라벨을 지정해 주세요."
+  echo "Fallback: gh pr edit \"$PR_NUMBER\" --add-label \"$TYPE_LABEL\" --add-label \"cursor-generated\""
+fi
 
-- 최대 **50자**
-- **마침표 사용 금지**
-- **특수문자 사용 금지**
-- **개조식 구문**
-- **한글 작성**
+if ! gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/assignees" \
+  --method POST \
+  --input - <<< "{\"assignees\":[\"$CURRENT_ASSIGNEE\"]}"; then
+  echo "담당자 자동 지정에 실패했습니다. PR 페이지에서 수동으로 '$CURRENT_ASSIGNEE'를 지정해 주세요."
+  echo "Fallback: gh pr edit \"$PR_NUMBER\" --add-assignee \"$CURRENT_ASSIGNEE\""
+fi
 
-Example:
+echo "PR Title: $PR_TITLE"
+echo "PR URL: $PR_URL"
+echo "PR Type: $COMMIT_TYPE"
+```
 
-Feat(TK-1325): 카드 삭제 버튼 추가  
-Fix(TK-210): 로그인 토큰 갱신 오류 수정  
-Refactor(TK-98): Zustand store 구조 정리  
-Chore(TK-450): Cursor rules skills 구조 추가
+Commit type to checklist mapping:
 
----
+- Feat -> `새로운 기능 추가`
+- Fix -> `버그 수정 또는 typo`
+- Refactor -> `코드 리팩토링(코드 포맷팅, 세미콜론 누락, 코드 변경이 없는 경우 포함)`
+- Style -> `CSS 등 사용자 UI 디자인 변경`
+- Comment -> `필요한 주석 추가 및 변경`
+- Test -> `테스트(테스트 코드 추가, 수정, 삭제, 비즈니스 로직에 변경이 없는 경우)`
+- Chore -> `위에 걸리지 않는 기타 변경사항(빌드 스크립트 수정, assets image, 패키지 매니저 등)`
+- Init -> `프로젝트 초기 생성`
+- Rename -> `파일 혹은 폴더명 수정하거나 옮기는 경우`
+- Remove -> `파일을 삭제하는 작업만 수행하는 경우`
 
-## Step 5 — Generate PR Description
+Type label mapping:
 
-Use `.github/pull_request_template.md` as the source template.
-
-- Load `.github/pull_request_template.md` and keep the same section layout (`Related Issue`, `Summary`, `Checklist`).
-- Fill placeholders from diff analysis and extracted issue number.
-- In Checklist, set exactly one checked item that matches the selected commit type.
-- Do not embed the full template contents inside this command definition.
-
-Allowed commit type to checklist mapping:
-
-- Feat → 새로운 기능 추가
-- Fix → 버그 수정
-- Style → CSS 등 사용자 UI 디자인 변경
-- Refactor → 코드 리팩토링
-- Comment → 주석 추가 및 수정
-- Test → 테스트 추가, 테스트 리팩토링
-- Chore → 빌드 부분 혹은 패키지 매니저 수정
-- Rename → 파일 혹은 폴더명 수정
-- Remove → 파일 혹은 폴더 삭제
-
----
-
-## Step 6 — Execute Commands Automatically
-
-After generating the PR title and body, run the following commands sequentially:
-
-1. `git add -A`
-2. `git commit -m "<PR title>"`
-3. `git push -u origin HEAD`
-4. `BRANCH=$(git branch --show-current)`
-5. `EXISTING_PR_NUMBER=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')`
-6. `if [ -n "$EXISTING_PR_NUMBER" ]; then\
-gh pr edit "$EXISTING_PR_NUMBER" --title "<PR title>" --body "<PR body>";\
-gh pr view "$EXISTING_PR_NUMBER" --json url --jq .url;\
-else\
-gh pr create --title "<PR title>" --body "<PR body>";\
-fi`
-
-Rules:
-
-- Execute in order and stop on failure.
-- Do not use interactive git flags.
-- Do not force push.
-- Print the PR URL whether created or updated.
+- Feat -> `feature`
+- Fix -> `bug`
+- Refactor -> `refactor`
+- Style -> `ui`
+- Comment -> `documentation`
+- Test -> `test`
+- Chore -> `chore`
+- Init -> `init`
+- Rename -> `refactor`
+- Remove -> `cleanup`
