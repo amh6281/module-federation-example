@@ -1,8 +1,8 @@
 ---
-description: Generate commit and create a new pull request following the team convention.
+description: Commit changes and update an existing pull request.
 ---
 
-# Create Pull Request
+# Update Pull Request
 
 ```bash
 set -euo pipefail
@@ -14,6 +14,13 @@ BRANCH_NAME=$(git branch --show-current)
 ISSUE_NUMBER=$(echo "$BRANCH_NAME" | rg -o "[A-Z]+-[0-9]+" | head -n 1 || true)
 if [ -z "$ISSUE_NUMBER" ]; then
   echo "Branch name must include an issue number (example TK-1325)"
+  exit 1
+fi
+
+PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
+if [ -z "$PR_NUMBER" ]; then
+  echo "No existing PR found for this branch."
+  echo "Use /create-pr instead."
   exit 1
 fi
 
@@ -123,18 +130,17 @@ if [ "$HAS_DIFF" = true ]; then
 
   git add -A
   git commit -m "$PR_TITLE"
-fi
 
-PUSH_NEEDED=true
-if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
-  read -r BEHIND AHEAD < <(git rev-list --left-right --count @{u}...HEAD)
-  if [ "$AHEAD" -eq 0 ]; then
-    PUSH_NEEDED=false
+  PUSH_NEEDED=true
+  if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+    read -r BEHIND AHEAD < <(git rev-list --left-right --count @{u}...HEAD)
+    if [ "$AHEAD" -eq 0 ]; then
+      PUSH_NEEDED=false
+    fi
   fi
-fi
-
-if [ "$PUSH_NEEDED" = true ]; then
-  git push -u origin HEAD
+  if [ "$PUSH_NEEDED" = true ]; then
+    git push
+  fi
 fi
 
 if [ -f ".github/pull_request_template.md" ]; then
@@ -148,17 +154,7 @@ else
   PR_BODY=$'## Summary\n\n- 작업 요약\n\n## Changes\n\n- 변경사항 반영'
 fi
 
-BRANCH_NAME=$(git branch --show-current)
-PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
-
-if [ -n "$PR_NUMBER" ]; then
-  gh pr edit "$PR_NUMBER" --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
-else
-  PR_JSON=$(gh pr create --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY" --json number,url)
-  PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.number')
-fi
-
-PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
+gh pr edit "$PR_NUMBER" --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
 
 case "$COMMIT_TYPE" in
   Feat) TYPE_LABEL="feature" ;;
@@ -181,9 +177,9 @@ fi
 gh pr edit "$PR_NUMBER" --add-label "$TYPE_LABEL" --add-label "cursor-generated"
 gh pr edit "$PR_NUMBER" --add-assignee "$(gh api user --jq .login)"
 
+echo "PR updated"
 echo "PR Title: $PR_TITLE"
-echo "PR URL: $PR_URL"
-echo "PR Type: $COMMIT_TYPE"
+echo "PR URL: $(gh pr view "$PR_NUMBER" --json url --jq .url)"
 ```
 
 Commit type to checklist mapping:
