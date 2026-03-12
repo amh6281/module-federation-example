@@ -51,7 +51,6 @@ run_verify() {
 }
 
 # 1) 브랜치 / 이슈 정보 감지
-
 BRANCH_NAME=$(git branch --show-current)
 
 # 기본값: 브랜치 마지막 세그먼트 사용 (예: feature/TEST-123 → TEST-123)
