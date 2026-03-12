@@ -10,6 +10,7 @@ set -euo pipefail
 BASE_BRANCH="develop"
 DEFAULT_SUMMARY="작업 반영"
 CURSOR_LABEL="cursor-generated"
+REVIEWER_TEAM="platform-core"
 
 # 1) 브랜치 / 이슈 번호
 BRANCH_NAME=$(git branch --show-current)
@@ -130,10 +131,9 @@ fi
 PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
 
 if [ -n "$PR_NUMBER" ]; then
-  PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
   echo "이미 열린 PR이 있습니다."
-  echo "PR URL: $PR_URL"
-  echo "PR Title: $PR_TITLE"
+  echo "PR URL:"
+  gh pr view "$PR_NUMBER" --json url --jq .url
   exit 0
 fi
 
@@ -142,14 +142,13 @@ PR_JSON=$(gh pr create \
   --base "$BASE_BRANCH" \
   --title "$PR_TITLE" \
   --body "$PR_BODY" \
+  --team-reviewer "$REVIEWER_TEAM" \
   --json number,url)
 PR_NUMBER=$(printf "%s" "$PR_JSON" | jq -r '.number')
 PR_URL=$(printf "%s" "$PR_JSON" | jq -r '.url')
 
 # 10) Label + Assignee + Reviewer
 CURRENT_ASSIGNEE=$(gh api user --jq .login)
-REPO_OWNER=$(gh repo view --json owner --jq '.owner.login')
-REPO_NAME=$(gh repo view --json name --jq '.name')
 
 if ! gh label view "$CURSOR_LABEL" >/dev/null 2>&1; then
   gh label create "$CURSOR_LABEL" \
@@ -157,38 +156,14 @@ if ! gh label view "$CURSOR_LABEL" >/dev/null 2>&1; then
     --description "Created by cursor command" >/dev/null 2>&1 || true
 fi
 
-gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" \
+gh api repos/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/issues/$PR_NUMBER/labels \
   --method POST \
   --input - <<< "{\"labels\":[\"$CURSOR_LABEL\"]}" || true
 
-gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/assignees" \
+gh api repos/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/issues/$PR_NUMBER/assignees \
   --method POST \
   --input - <<< "{\"assignees\":[\"$CURRENT_ASSIGNEE\"]}" || true
-
-# REVIEWER_ARGS=()
-
-# while IFS= read -r owner; do
-#   [ -z "$owner" ] && continue
-#   owner="${owner#\@}"
-#   if [ "$owner" = "$CURRENT_ASSIGNEE" ]; then
-#     continue
-#   fi
-#   REVIEWER_ARGS+=("--add-reviewer" "$owner")
-# done < <(
-#   awk '
-#     $1 ~ /^#/ || NF < 2 { next }
-#     {
-#       for (i = 2; i <= NF; i++) {
-#         sub(/#.*/, "", $i)
-#         if ($i != "" && $i ~ /^@/) print $i
-#       }
-#     }
-#   ' .github/CODEOWNERS | sort -u
-# )
-
-# if [ ${#REVIEWER_ARGS[@]} -gt 0 ]; then
-#   gh pr edit "$PR_NUMBER" "${REVIEWER_ARGS[@]}" || true
-# fi
+fi
 
 # 결과 출력
 echo ""
