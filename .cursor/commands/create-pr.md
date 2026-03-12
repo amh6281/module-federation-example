@@ -4,38 +4,74 @@ description: Generate commit and create a new pull request following the team co
 
 # Create Pull Request
 
-```bash
+````bash
 set -euo pipefail
 
 BASE_BRANCH="develop"
 DEFAULT_SUMMARY="작업 반영"
 CURSOR_LABEL="cursor-generated"
 REVIEWER_TEAM="platform-core"
+VERIFY_COMMAND_PATH=".cursor/commands/verify.md"
 
-# 1) 브랜치 / 이슈 번호
+# 초기 Git 상태
+BASE_COMMIT=$(git rev-parse HEAD)
+BASE_BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+HAS_NEW_COMMIT=false
+HAS_DIFF=false
+HAS_UPSTREAM=false
+HAS_UNPUSHED_COMMITS=false
+
+# 롤백 유틸리티
+rollback_and_exit() {
+  local reason="$1"
+
+  echo "❗ 에러: ${reason}"
+  echo "롤백: HEAD를 ${BASE_COMMIT}(으)로 되돌립니다."
+
+  if [ "$HAS_NEW_COMMIT" = true ]; then
+    git reset --hard "$BASE_COMMIT" || true
+  fi
+
+  echo "브랜치로 복귀: ${BASE_BRANCH_NAME}"
+  echo "커맨드 실행을 중단합니다."
+  exit 1
+}
+
+# verify 유틸리티
+run_verify() {
+  local script=""
+
+  if [ -f "$VERIFY_COMMAND_PATH" ]; then
+    script="$(awk '/^```bash$/{flag=1; next} flag && /^```$/{exit} flag {print}' "$VERIFY_COMMAND_PATH")"
+  fi
+
+  echo "실행: $VERIFY_COMMAND_PATH"
+  bash -lc "$script"
+}
+
+# 1) 브랜치 / 이슈 정보 감지
+
 BRANCH_NAME=$(git branch --show-current)
 
-# 기본값: 브랜치 마지막 segment (feature/test → test)
+# 기본값: 브랜치 마지막 세그먼트 사용 (예: feature/TEST-123 → TEST-123)
 ISSUE_NUMBER="${BRANCH_NAME##*/}"
 
-# 브랜치에 Jira 티켓 패턴이 있으면 우선 사용
+# Jira 티켓 추출
 TICKET_KEY=$(printf '%s\n' "$BRANCH_NAME" | rg -o "[A-Z]+-[0-9]+" | head -n1 || true)
 if [ -n "$TICKET_KEY" ]; then
   ISSUE_NUMBER="$TICKET_KEY"
 fi
 
-# Jira URL 생성 (유효한 티켓일 때만)
+# Jira 이슈 링크
 if printf '%s\n' "$ISSUE_NUMBER" | rg -q "^[A-Z]+-[0-9]+$"; then
   JIRA_ISSUE_URL="https://jira.mailplug.co.kr/browse/${ISSUE_NUMBER}"
 else
   JIRA_ISSUE_URL=""
 fi
 
-# 2) Git 상태
-HAS_DIFF=false
-HAS_UPSTREAM=false
-HAS_UNPUSHED_COMMITS=false
-DIFF_FILES=$(git diff --name-only)
+# 2) Git 상태 확인
+DIFF_FILES=$(git diff --name-only HEAD)
 
 if [ -n "$DIFF_FILES" ] || ! git diff --cached --quiet; then
   HAS_DIFF=true
@@ -54,7 +90,7 @@ else
   HAS_UNPUSHED_COMMITS=true
 fi
 
-# 3) Commit Type 분석
+# 3) Commit Type 감지 유틸리티
 detect_commit_type() {
   local files="$1"
   local type="Chore"
@@ -103,17 +139,24 @@ PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
 
 # 5) Commit
 if [ "$HAS_DIFF" = true ]; then
-  npm run lint
-  npm run type-check
+  if ! run_verify; then
+    rollback_and_exit "검증 단계 실패"
+  fi
 
   git add -A
-  git commit -m "$PR_TITLE"
+  if ! git commit -m "$PR_TITLE"; then
+    rollback_and_exit "commit 단계 실패"
+  fi
   HAS_UNPUSHED_COMMITS=true
+  HAS_NEW_COMMIT=true
+
 fi
 
 # 6) Push
 if [ "$HAS_UNPUSHED_COMMITS" = true ]; then
-  git push -u origin HEAD
+  if ! git push -u origin HEAD; then
+    rollback_and_exit "push 단계 실패 (remote 충돌/권한/네트워크 등)"
+  fi
 fi
 
 # 7) PR Body 생성
@@ -195,4 +238,4 @@ echo "PR Created"
 echo "PR Title: $PR_TITLE"
 echo "PR URL: $PR_URL"
 echo "PR Type: $COMMIT_TYPE"
-```
+````
