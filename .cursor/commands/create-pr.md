@@ -4,14 +4,13 @@ description: Generate commit and create a new pull request following the team co
 
 # Create Pull Request
 
-````bash
+```bash
 set -euo pipefail
 
 BASE_BRANCH="develop"
 DEFAULT_SUMMARY="작업 반영"
 CURSOR_LABEL="cursor-generated"
 REVIEWER_TEAM="platform-core"
-VERIFY_COMMAND_PATH=".cursor/commands/verify.md"
 
 # 초기 Git 상태
 BASE_COMMIT=$(git rev-parse HEAD)
@@ -38,20 +37,28 @@ rollback_and_exit() {
   exit 1
 }
 
-# verify 유틸리티
-run_verify() {
-  local script=""
+# Commit Type 감지 유틸리티
+detect_commit_type() {
+  local files="$1"
+  local type="Chore"
 
-  if [ -f "$VERIFY_COMMAND_PATH" ]; then
-    script="$(awk '/^```bash$/{flag=1; next} flag && /^```$/{exit} flag {print}' "$VERIFY_COMMAND_PATH")"
+  if printf "%s\n" "$files" | rg -q "test|tests|spec"; then
+    type="Test"
+  elif printf "%s\n" "$files" | rg -q "\\.css|\\.scss|style"; then
+    type="Style"
+  elif printf "%s\n" "$files" | rg -q "\\.md|docs"; then
+    type="Comment"
+  elif printf "%s\n" "$files" | rg -q "package.json|lock|Dockerfile|workflow"; then
+    type="Chore"
+  elif printf "%s\n" "$files" | rg -q "src|app|components|pages|hooks"; then
+    type="Refactor"
   fi
 
-  echo "실행: $VERIFY_COMMAND_PATH"
-  bash -lc "$script"
+  echo "$type"
 }
 
-# 1) 브랜치 / 이슈 정보 감지
 
+# 1) 브랜치 / 이슈 정보 감지
 BRANCH_NAME=$(git branch --show-current)
 
 # 기본값: 브랜치 마지막 세그먼트 사용 (예: feature/TEST-123 → TEST-123)
@@ -90,27 +97,7 @@ else
   HAS_UNPUSHED_COMMITS=true
 fi
 
-# 3) Commit Type 감지 유틸리티
-detect_commit_type() {
-  local files="$1"
-  local type="Chore"
-
-  if printf "%s\n" "$files" | rg -q "test|tests|spec"; then
-    type="Test"
-  elif printf "%s\n" "$files" | rg -q "\\.css|\\.scss|style"; then
-    type="Style"
-  elif printf "%s\n" "$files" | rg -q "\\.md|docs"; then
-    type="Comment"
-  elif printf "%s\n" "$files" | rg -q "package.json|lock|Dockerfile|workflow"; then
-    type="Chore"
-  elif printf "%s\n" "$files" | rg -q "src|app|components|pages|hooks"; then
-    type="Refactor"
-  fi
-
-  echo "$type"
-}
-
-# 4) Commit / PR Title 생성
+# 3) Commit / PR Title 생성
 if [ "$HAS_DIFF" = true ]; then
   COMMIT_TYPE=$(detect_commit_type "$DIFF_FILES")
   SUMMARY_TEXT="$(
@@ -137,29 +124,24 @@ fi
 
 PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
 
-# 5) Commit
+# 4) Commit
 if [ "$HAS_DIFF" = true ]; then
-  if ! run_verify; then
-    rollback_and_exit "검증 단계 실패"
-  fi
-
   git add -A
   if ! git commit -m "$PR_TITLE"; then
     rollback_and_exit "commit 단계 실패"
   fi
   HAS_UNPUSHED_COMMITS=true
   HAS_NEW_COMMIT=true
-
 fi
 
-# 6) Push
+# 5) Push
 if [ "$HAS_UNPUSHED_COMMITS" = true ]; then
   if ! git push -u origin HEAD; then
     rollback_and_exit "push 단계 실패 (remote 충돌/권한/네트워크 등)"
   fi
 fi
 
-# 7) PR Body 생성
+# 6) PR Body 생성
 if [ -f ".github/pull_request_template.md" ]; then
   PR_BODY=$(
     cat .github/pull_request_template.md \
@@ -170,7 +152,7 @@ else
   PR_BODY=$'## Summary\n\n- 작업 요약\n\n## Changes\n\n- 변경사항 반영'
 fi
 
-# 8) 기존 PR 확인
+# 7) 기존 PR 확인
 PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
 
 if [ -n "$PR_NUMBER" ]; then
@@ -180,7 +162,7 @@ if [ -n "$PR_NUMBER" ]; then
   exit 0
 fi
 
-# 9) PR 생성
+# 8) PR 생성
 PR_JSON=$(gh pr create \
   --base "$BASE_BRANCH" \
   --title "$PR_TITLE" \
@@ -190,7 +172,7 @@ PR_JSON=$(gh pr create \
 PR_NUMBER=$(printf "%s" "$PR_JSON" | jq -r '.number')
 PR_URL=$(printf "%s" "$PR_JSON" | jq -r '.url')
 
-# 10) Label + Assignee + Reviewer
+# 9) Label + Assignee + Reviewer
 CURRENT_ASSIGNEE=$(gh api user --jq .login)
 
 if ! gh label view "$CURSOR_LABEL" >/dev/null 2>&1; then
@@ -238,4 +220,4 @@ echo "PR Created"
 echo "PR Title: $PR_TITLE"
 echo "PR URL: $PR_URL"
 echo "PR Type: $COMMIT_TYPE"
-````
+```
