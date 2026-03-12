@@ -31,6 +31,33 @@ detect_commit_type() {
   echo "$type"
 }
 
+# PR 제목에서 이슈 번호 뒤 summary만 추출
+extract_pr_summary() {
+  local title="$1"
+  local issue_number="$2"
+
+  if [[ "$title" =~ ^([A-Za-z]+)\(([A-Z]+-[0-9]+)\):[[:space:]]*(.*)$ ]]; then
+    if [ "${BASH_REMATCH[2]}" = "$issue_number" ] && [ -n "${BASH_REMATCH[3]}" ]; then
+      printf "%s" "${BASH_REMATCH[3]}"
+      return
+    fi
+  fi
+
+  printf "%s" "$title"
+}
+
+# 기존 PR summary와 이번 변경 summary를 합쳐 새 제목용 summary를 만든다.
+build_updated_summary() {
+  local previous_summary="$1"
+  local next_summary="$2"
+
+  printf "%s\n%s\n" "$previous_summary" "$next_summary" \
+    | awk 'NF && !seen[$0]++' \
+    | head -n 3 \
+    | awk 'BEGIN { first = 1 } NF { if (!first) printf " / "; printf "%s", $0; first = 0 }' \
+    | cut -c1-40
+}
+
 # 1) 브랜치 / 이슈 정보 감지
 ISSUE_NUMBER=$(printf '%s\n' "$BRANCH_NAME" | rg -o "[A-Z]+-[0-9]+" | head -n1 || true)
 
@@ -40,14 +67,15 @@ if [ -z "$ISSUE_NUMBER" ]; then
 fi
 
 # 2) 기존 PR 확인
-PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
+PR_JSON=$(gh pr list --state open --head "$BRANCH_NAME" --json number,url,title --jq '.[0]')
+PR_NUMBER=$(printf "%s" "$PR_JSON" | jq -r '.number // empty')
+PR_URL=$(printf "%s" "$PR_JSON" | jq -r '.url // empty')
+CURRENT_PR_TITLE=$(printf "%s" "$PR_JSON" | jq -r '.title // empty')
 
-if [ -z "$PR_NUMBER" ]; then
+if [ -z "$PR_NUMBER" ] || [ -z "$PR_URL" ]; then
   echo "열린 PR이 없습니다. 먼저 create-pr를 실행하세요."
   exit 1
 fi
-
-PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
 
 # 3) 변경사항 확인
 DIFF_FILES=$(git diff --name-only HEAD)
@@ -72,11 +100,20 @@ SUMMARY_TEXT="$(
 )"
 [ -z "$SUMMARY_TEXT" ] && SUMMARY_TEXT="$DEFAULT_SUMMARY"
 
+PREVIOUS_SUMMARY=$(extract_pr_summary "$CURRENT_PR_TITLE" "$ISSUE_NUMBER")
+MERGED_SUMMARY=$(build_updated_summary "$PREVIOUS_SUMMARY" "$SUMMARY_TEXT")
+[ -n "$MERGED_SUMMARY" ] && SUMMARY_TEXT="$MERGED_SUMMARY"
+
 PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
 
 # 5) Commit
 git add -A
-git commit -m "$PR_TITLE"
+
+if git diff --cached --quiet; then
+  echo "커밋할 staged 변경사항이 없습니다."
+else
+  git commit -m "$PR_TITLE"
+fi
 
 # 6) Push
 git push -u origin HEAD
