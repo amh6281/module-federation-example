@@ -116,6 +116,7 @@ PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
 if [ ${#PR_TITLE} -gt 50 ]; then
   PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT:0:$((50-${#COMMIT_TYPE}-${#ISSUE_NUMBER}-3))}"
 fi
+JIRA_ISSUE_URL="https://jira.mailplug.co.kr/browse/${ISSUE_NUMBER}"
 
 if [ "$HAS_DIFF" = true ]; then
   npm run lint
@@ -140,7 +141,7 @@ fi
 if [ -f ".github/pull_request_template.md" ]; then
   TEMPLATE=$(cat .github/pull_request_template.md)
   if printf '%s' "$TEMPLATE" | rg -q "Related Issue|Summary|Checklist"; then
-    PR_BODY=$(printf "## Related Issue\n\n%s\n\n%s" "$ISSUE_NUMBER" "$TEMPLATE")
+    PR_BODY=$(printf "## Related Issue\n\n%s\n\n%s" "$JIRA_ISSUE_URL" "$TEMPLATE")
   else
     PR_BODY="$TEMPLATE"
   fi
