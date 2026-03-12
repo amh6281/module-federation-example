@@ -141,7 +141,10 @@ fi
 if [ -f ".github/pull_request_template.md" ]; then
   TEMPLATE=$(cat .github/pull_request_template.md)
   if printf '%s' "$TEMPLATE" | rg -q "Related Issue|Summary|Checklist"; then
-    PR_BODY=$(printf "## Related Issue\n\n%s\n\n%s" "$JIRA_ISSUE_URL" "$TEMPLATE")
+    TEMPLATE_WITH_LINK=$(printf '%s' "$TEMPLATE" \
+      | sed "s#<!---- 이슈 번호 --> RS-#${ISSUE_NUMBER}#g" \
+      | sed "s#<!---- JIRA 이슈 링크 -->#${JIRA_ISSUE_URL}#g")
+    PR_BODY="$TEMPLATE_WITH_LINK"
   else
     PR_BODY="$TEMPLATE"
   fi
