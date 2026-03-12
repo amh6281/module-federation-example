@@ -1,0 +1,13 @@
+labels:
+  '✨ Feature':
+    - '^(Feat|Feature)'
+  '🎨 Html&css':
+    - '^Style'
+  '🐞 BugFix':
+    - '^Fix'
+  '🔨 Refactor':
+    - '^Refactor'
+  '✅ Test':
+    - '^test'
+  '⚙ Setting':
+    - '^Chore'
