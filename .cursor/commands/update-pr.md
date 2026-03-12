@@ -7,6 +7,7 @@ description: Commit additional work and update the existing pull request followi
 ```bash
 set -euo pipefail
 
+BASE_BRANCH="develop"
 DEFAULT_SUMMARY="추가 작업 반영"
 
 BRANCH_NAME=$(git branch --show-current)
@@ -16,23 +17,23 @@ detect_commit_type() {
   local files="$1"
   local type="Chore"
 
-  if printf "%s\n" "$files" | rg -q "test|tests|spec"; then
+  if printf "%s\n" "$files" | grep -qE "test|tests|spec"; then
     type="Test"
-  elif printf "%s\n" "$files" | rg -q "\\.css|\\.scss|style"; then
+  elif printf "%s\n" "$files" | grep -qE "\\.css|\\.scss|style"; then
     type="Style"
-  elif printf "%s\n" "$files" | rg -q "\\.md|docs"; then
+  elif printf "%s\n" "$files" | grep -qE "\\.md|docs"; then
     type="Comment"
-  elif printf "%s\n" "$files" | rg -q "package.json|lock|Dockerfile|workflow"; then
+  elif printf "%s\n" "$files" | grep -qE "package.json|lock|Dockerfile|workflow"; then
     type="Chore"
-  elif printf "%s\n" "$files" | rg -q "src|app|components|pages|hooks"; then
+  elif printf "%s\n" "$files" | grep -qE "src|app|components|pages|hooks"; then
     type="Refactor"
   fi
 
   echo "$type"
 }
 
-# PR 제목에서 이슈 번호 뒤 summary만 추출
-extract_pr_summary() {
+# Commit / PR 제목에서 이슈 번호 뒤 summary만 추출
+extract_commit_summary() {
   local title="$1"
   local issue_number="$2"
 
@@ -46,20 +47,70 @@ extract_pr_summary() {
   printf "%s" "$title"
 }
 
-# 기존 PR summary와 이번 변경 summary를 합쳐 새 제목용 summary를 만든다.
-build_updated_summary() {
-  local previous_summary="$1"
-  local next_summary="$2"
+# base 브랜치 또는 upstream 기준으로 현재 브랜치의 커밋 범위를 계산한다.
+detect_commit_range() {
+  if git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
+    printf "%s" "${BASE_BRANCH}..HEAD"
+    return
+  fi
 
-  printf "%s\n%s\n" "$previous_summary" "$next_summary" \
-    | awk 'NF && !seen[$0]++' \
-    | head -n 3 \
+  if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+    printf "%s" "@{u}..HEAD"
+  fi
+}
+
+# 누적 커밋 제목을 조합해 PR 제목용 summary를 만든다.
+build_summary_from_commits() {
+  local commit_range="$1"
+  local issue_number="$2"
+  local summaries
+
+  [ -z "$commit_range" ] && return 0
+
+  summaries="$(
+    git log --format=%s --reverse "$commit_range" 2>/dev/null \
+      | while IFS= read -r title; do
+          [ -z "$title" ] && continue
+          extract_commit_summary "$title" "$issue_number"
+          printf '\n'
+        done \
+      | awk 'NF && !seen[$0]++' \
+      | head -n 3
+  )"
+
+  [ -z "$summaries" ] && return 0
+
+  printf "%s" "$summaries" \
     | awk 'BEGIN { first = 1 } NF { if (!first) printf " / "; printf "%s", $0; first = 0 }' \
     | cut -c1-40
 }
 
+# 누적 커밋 제목을 PR 본문 Summary 섹션용 bullet 목록으로 만든다.
+build_body_summary_lines() {
+  local commit_range="$1"
+  local issue_number="$2"
+  local summaries
+
+  [ -z "$commit_range" ] && return 0
+
+  summaries="$(
+    git log --format=%s --reverse "$commit_range" 2>/dev/null \
+      | while IFS= read -r title; do
+          [ -z "$title" ] && continue
+          extract_commit_summary "$title" "$issue_number"
+          printf '\n'
+        done \
+      | awk 'NF && !seen[$0]++' \
+      | head -n 8
+  )"
+
+  [ -z "$summaries" ] && return 0
+
+  printf "%s" "$summaries" | awk 'NF { printf "- %s\n", $0 }'
+}
+
 # 1) 브랜치 / 이슈 정보 감지
-ISSUE_NUMBER=$(printf '%s\n' "$BRANCH_NAME" | rg -o "[A-Z]+-[0-9]+" | head -n1 || true)
+ISSUE_NUMBER=$(printf '%s\n' "$BRANCH_NAME" | grep -oE "[A-Z]+-[0-9]+" | head -n1 || true)
 
 if [ -z "$ISSUE_NUMBER" ]; then
   echo "브랜치 이름에 이슈 번호가 필요합니다. 예: TE-11"
@@ -70,7 +121,6 @@ fi
 PR_JSON=$(gh pr list --state open --head "$BRANCH_NAME" --json number,url,title --jq '.[0]')
 PR_NUMBER=$(printf "%s" "$PR_JSON" | jq -r '.number // empty')
 PR_URL=$(printf "%s" "$PR_JSON" | jq -r '.url // empty')
-CURRENT_PR_TITLE=$(printf "%s" "$PR_JSON" | jq -r '.title // empty')
 
 if [ -z "$PR_NUMBER" ] || [ -z "$PR_URL" ]; then
   echo "열린 PR이 없습니다. 먼저 create-pr를 실행하세요."
@@ -100,10 +150,6 @@ SUMMARY_TEXT="$(
 )"
 [ -z "$SUMMARY_TEXT" ] && SUMMARY_TEXT="$DEFAULT_SUMMARY"
 
-PREVIOUS_SUMMARY=$(extract_pr_summary "$CURRENT_PR_TITLE" "$ISSUE_NUMBER")
-MERGED_SUMMARY=$(build_updated_summary "$PREVIOUS_SUMMARY" "$SUMMARY_TEXT")
-[ -n "$MERGED_SUMMARY" ] && SUMMARY_TEXT="$MERGED_SUMMARY"
-
 PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
 
 # 5) Commit
@@ -118,10 +164,48 @@ fi
 # 6) Push
 git push -u origin HEAD
 
-# 7) PR Title 수정
+# 7) 누적 커밋 기준 PR Title / Body 재생성
+COMMIT_RANGE=$(detect_commit_range)
+TITLE_SUMMARY=$(build_summary_from_commits "$COMMIT_RANGE" "$ISSUE_NUMBER")
+[ -n "$TITLE_SUMMARY" ] && PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${TITLE_SUMMARY}"
+
+BODY_SUMMARY_LINES=$(build_body_summary_lines "$COMMIT_RANGE" "$ISSUE_NUMBER")
+[ -z "$BODY_SUMMARY_LINES" ] && BODY_SUMMARY_LINES="- $SUMMARY_TEXT"
+
+if [ -f ".github/pull_request_template.md" ]; then
+  JIRA_ISSUE_URL="https://jira.mailplug.co.kr/browse/${ISSUE_NUMBER}"
+  PR_BODY=$(
+    sed "s#<!---- 이슈 번호 --> RS-#${ISSUE_NUMBER}#g" .github/pull_request_template.md \
+      | sed "s#<!---- JIRA 이슈 링크 -->#${JIRA_ISSUE_URL}#g" \
+      | awk -v summary_lines="$BODY_SUMMARY_LINES" '
+          /<!---- 변경 사항 및 관련 이슈에 대해 간단하게 작성해주세요\. 어떻게보다 무엇을 왜 수정했는지 설명해주세요\. -->/ {
+            print
+            print ""
+            print summary_lines
+            skip_next_dash = 1
+            next
+          }
+          skip_next_dash && $0 == "-" {
+            skip_next_dash = 0
+            next
+          }
+          {
+            print
+          }
+        '
+  )
+else
+  PR_BODY=$'## Summary\n\n'"$BODY_SUMMARY_LINES"
+fi
+
+# 8) PR Title / Body 수정
 gh api "repos/${REPO_NAME_WITH_OWNER}/pulls/${PR_NUMBER}" \
   --method PATCH \
-  -f title="$PR_TITLE" >/dev/null
+  --input - <<< "$(jq -n \
+    --arg title "$PR_TITLE" \
+    --arg body "$PR_BODY" \
+    '{title: $title, body: $body}'
+  )" >/dev/null
 
 # 결과 출력
 echo ""
