@@ -16,12 +16,36 @@ if [ -z "$ISSUE_NUMBER" ]; then
   echo "Branch name must include an issue number (example TK-1325)"
   exit 1
 fi
+JIRA_ISSUE_URL="https://jira.mailplug.co.kr/browse/${ISSUE_NUMBER}"
 
+# ============================================================================
+# 1) 상태 판별
+# ============================================================================
 HAS_DIFF=false
 if ! (git diff --quiet && git diff --cached --quiet); then
   HAS_DIFF=true
 fi
 
+HAS_UPSTREAM=false
+if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+  HAS_UPSTREAM=true
+fi
+
+HAS_UNPUSHED_COMMITS=false
+if [ "$HAS_UPSTREAM" = true ]; then
+  read -r BEHIND AHEAD < <(git rev-list --left-right --count @{u}...HEAD)
+  if [ "${AHEAD:-0}" -gt 0 ]; then
+    HAS_UNPUSHED_COMMITS=true
+  fi
+else
+  HAS_UNPUSHED_COMMITS=true
+fi
+
+# ============================================================================
+# 2) 커밋 타입 / 제목 생성
+#    - 변경 파일이 있을 때만 diff 기반으로 계산
+#    - 변경 파일이 없으면 마지막 커밋 메시지 재사용
+# ============================================================================
 if [ "$HAS_DIFF" = true ]; then
   DIFF_RAW=$(mktemp)
   git status --porcelain=v1 > "$DIFF_RAW"
@@ -66,12 +90,14 @@ if [ "$HAS_DIFF" = true ]; then
         HAS_FIX_HINT=1 ;;
     esac
 
-    if rg -qE "TODO|FIXME|BUG|typo|오타|버그" "$path" 2>/dev/null; then
-      HAS_FIX_HINT=1
-    fi
+    if [ -f "$path" ]; then
+      if rg -qE "TODO|FIXME|BUG|typo|오타|버그" "$path" 2>/dev/null; then
+        HAS_FIX_HINT=1
+      fi
 
-    if rg -qE "feat|feature|기능" "$path" 2>/dev/null; then
-      HAS_FEAT_HINT=1
+      if rg -qE "feat|feature|기능" "$path" 2>/dev/null; then
+        HAS_FEAT_HINT=1
+      fi
     fi
   done < "$DIFF_RAW"
   rm -f "$DIFF_RAW"
@@ -103,43 +129,77 @@ if [ "$HAS_DIFF" = true ]; then
   if [ -n "$RAW_SUMMARY" ]; then
     SUMMARY_TEXT="$RAW_SUMMARY"
   fi
-  SUMMARY_TEXT=$(printf "%s" "$SUMMARY_TEXT" | tr -d '[:punct:]' | sed 's/[[:space:]]\+/ /g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | cut -c1-40)
+
+  SUMMARY_TEXT=$(printf "%s" "$SUMMARY_TEXT" \
+    | tr -d '[:punct:]' \
+    | sed 's/[[:space:]]\+/ /g' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | cut -c1-40)
+
   if [ -z "$SUMMARY_TEXT" ]; then
     SUMMARY_TEXT="변경사항 반영"
   fi
 else
+  LAST_COMMIT_TITLE=$(git log -1 --pretty=%s 2>/dev/null || true)
+
   COMMIT_TYPE="Chore"
-  SUMMARY_TEXT="변경사항 없음"
+  SUMMARY_TEXT="작업 반영"
+
+  if [ -n "$LAST_COMMIT_TITLE" ]; then
+    if [[ "$LAST_COMMIT_TITLE" =~ ^([A-Za-z]+)\(([A-Z]+-[0-9]+)\):[[:space:]]*(.*)$ ]]; then
+      if [ "${BASH_REMATCH[2]}" = "$ISSUE_NUMBER" ]; then
+        COMMIT_TYPE="${BASH_REMATCH[1]}"
+        SUMMARY_TEXT="${BASH_REMATCH[3]}"
+      fi
+    fi
+  fi
+
+  case "$COMMIT_TYPE" in
+    Feat|Fix|Refactor|Style|Comment|Test|Chore|Init|Rename|Remove) ;;
+    *) COMMIT_TYPE="Chore" ;;
+  esac
+
+  SUMMARY_TEXT=$(printf "%s" "$SUMMARY_TEXT" \
+    | tr -d '[:punct:]' \
+    | sed 's/[[:space:]]\+/ /g' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | cut -c1-40)
+
+  if [ -z "$SUMMARY_TEXT" ]; then
+    SUMMARY_TEXT="변경사항 없음"
+  fi
 fi
 
 PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT}"
 if [ ${#PR_TITLE} -gt 50 ]; then
   PR_TITLE="${COMMIT_TYPE}(${ISSUE_NUMBER}): ${SUMMARY_TEXT:0:$((50-${#COMMIT_TYPE}-${#ISSUE_NUMBER}-3))}"
 fi
-JIRA_ISSUE_URL="https://jira.mailplug.co.kr/browse/${ISSUE_NUMBER}"
 
+# ============================================================================
+# 3) 변경 파일이 있으면 commit
+# ============================================================================
 if [ "$HAS_DIFF" = true ]; then
   npm run lint
   npm run type-check
 
   git add -A
   git commit -m "$PR_TITLE"
+  HAS_UNPUSHED_COMMITS=true
 fi
 
-PUSH_NEEDED=true
-if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
-  read -r BEHIND AHEAD < <(git rev-list --left-right --count @{u}...HEAD)
-  if [ "$AHEAD" -eq 0 ]; then
-    PUSH_NEEDED=false
-  fi
-fi
-
-if [ "$PUSH_NEEDED" = true ]; then
+# ============================================================================
+# 4) push 필요하면 push
+# ============================================================================
+if [ "$HAS_UNPUSHED_COMMITS" = true ]; then
   git push -u origin HEAD
 fi
 
+# ============================================================================
+# 5) PR Body 구성
+# ============================================================================
 if [ -f ".github/pull_request_template.md" ]; then
   TEMPLATE=$(cat .github/pull_request_template.md)
+
   if printf '%s' "$TEMPLATE" | rg -q "Related Issue|Summary|Checklist"; then
     TEMPLATE_WITH_LINK=$(printf '%s' "$TEMPLATE" \
       | sed "s#<!---- 이슈 번호 --> RS-#${ISSUE_NUMBER}#g" \
@@ -152,44 +212,40 @@ else
   PR_BODY=$'## Summary\n\n- 작업 요약\n\n## Changes\n\n- 변경사항 반영'
 fi
 
+# ============================================================================
+# 6) PR 생성
+#    - 기존 열린 PR이 있으면 새로 생성하지 않고 URL만 출력
+# ============================================================================
 BRANCH_NAME=$(git branch --show-current)
 PR_NUMBER=$(gh pr list --state open --head "$BRANCH_NAME" --json number --jq '.[0].number // empty')
 
 if [ -n "$PR_NUMBER" ]; then
-  gh pr edit "$PR_NUMBER" --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
-else
-  PR_JSON=$(gh pr create --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY" --json number,url)
-  PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.number')
+  PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
+  echo "이미 열린 PR이 있습니다."
+  echo "PR URL: $PR_URL"
+  echo "PR Title: $PR_TITLE"
+  echo "PR Type: $COMMIT_TYPE"
+  exit 0
 fi
 
-PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
+PR_JSON=$(gh pr create --base "$BASE_BRANCH" --title "$PR_TITLE" --body "$PR_BODY" --json number,url)
+PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.number')
+PR_URL=$(printf '%s' "$PR_JSON" | jq -r '.url')
+
 REPO_OWNER=$(gh repo view --json owner --jq '.owner.login')
 REPO_NAME=$(gh repo view --json name --jq '.name')
 CURRENT_ASSIGNEE=$(gh api user --jq .login)
+CURSOR_LABEL="cursor-generated"
 
-case "$COMMIT_TYPE" in
-  Feat) TYPE_LABEL="feature" ;;
-  Fix) TYPE_LABEL="bug" ;;
-  Refactor) TYPE_LABEL="refactor" ;;
-  Style) TYPE_LABEL="ui" ;;
-  Comment) TYPE_LABEL="documentation" ;;
-  Test) TYPE_LABEL="test" ;;
-  Chore) TYPE_LABEL="chore" ;;
-  Init) TYPE_LABEL="init" ;;
-  Rename) TYPE_LABEL="refactor" ;;
-  Remove) TYPE_LABEL="cleanup" ;;
-  *) TYPE_LABEL="chore" ;;
-esac
-
-if ! gh label view "$TYPE_LABEL" >/dev/null 2>&1; then
-  gh label create "$TYPE_LABEL" --color 0e8a16 --description "Auto-created by script" >/dev/null 2>&1 || true
+if ! gh label view "$CURSOR_LABEL" >/dev/null 2>&1; then
+  gh label create "$CURSOR_LABEL" --color 0e8a16 --description "Created by cursor command" >/dev/null 2>&1 || true
 fi
 
 if ! gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" \
   --method POST \
-  --input - <<< "$(printf '%s\n' "$TYPE_LABEL" "cursor-generated" | jq -R . | jq -s . | jq -c '{labels: .}')"; then
-  echo "라벨 자동 반영에 실패했습니다. PR 페이지에서 수동으로 ' ${TYPE_LABEL}, cursor-generated ' 라벨을 지정해 주세요."
-  echo "Fallback: gh pr edit \"$PR_NUMBER\" --add-label \"$TYPE_LABEL\" --add-label \"cursor-generated\""
+  --input - <<< "$(printf '%s\n' "$CURSOR_LABEL" | jq -R . | jq -s . | jq -c '{labels: .}')"; then
+  echo "라벨 자동 반영에 실패했습니다. PR 페이지에서 수동으로 '$CURSOR_LABEL' 라벨을 지정해 주세요."
+  echo "Fallback: gh pr edit \"$PR_NUMBER\" --add-label \"$CURSOR_LABEL\""
 fi
 
 if ! gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/assignees" \
@@ -217,15 +273,7 @@ Commit type to checklist mapping:
 - Rename -> `파일 혹은 폴더명 수정하거나 옮기는 경우`
 - Remove -> `파일을 삭제하는 작업만 수행하는 경우`
 
-Type label mapping:
+Auto-labeling behavior:
 
-- Feat -> `feature`
-- Fix -> `bug`
-- Refactor -> `refactor`
-- Style -> `ui`
-- Comment -> `documentation`
-- Test -> `test`
-- Chore -> `chore`
-- Init -> `init`
-- Rename -> `refactor`
-- Remove -> `cleanup`
+- 타입 라벨(`✨ Feature`, `🎨 Html&css` 등)은 `.github/labeler.yml`의 PR labeler 워크플로로 자동 처리합니다.
+- 이 명령은 PR 생성 시 `cursor-generated` 라벨만 추가합니다.
