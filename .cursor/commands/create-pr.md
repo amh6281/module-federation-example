@@ -163,6 +163,30 @@ gh api repos/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/issues/$PR
 gh api repos/$(gh repo view --json nameWithOwner --jq .nameWithOwner)/issues/$PR_NUMBER/assignees \
   --method POST \
   --input - <<< "{\"assignees\":[\"$CURRENT_ASSIGNEE\"]}" || true
+
+REVIEWER_ARGS=()
+
+while IFS= read -r owner; do
+  [ -z "$owner" ] && continue
+  owner="${owner#\@}"
+  if [ "$owner" = "$CURRENT_ASSIGNEE" ]; then
+    continue
+  fi
+  REVIEWER_ARGS+=("--add-reviewer" "$owner")
+done < <(
+  awk '
+    $1 ~ /^#/ || NF < 2 { next }
+    {
+      for (i = 2; i <= NF; i++) {
+        sub(/#.*/, "", $i)
+        if ($i != "" && $i ~ /^@/) print $i
+      }
+    }
+  ' .github/CODEOWNERS | sort -u
+)
+
+if [ ${#REVIEWER_ARGS[@]} -gt 0 ]; then
+  gh pr edit "$PR_NUMBER" "${REVIEWER_ARGS[@]}" || true
 fi
 
 # 결과 출력
