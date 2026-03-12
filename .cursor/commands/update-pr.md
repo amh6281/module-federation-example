@@ -10,6 +10,7 @@ set -euo pipefail
 DEFAULT_SUMMARY="추가 작업 반영"
 
 BRANCH_NAME=$(git branch --show-current)
+REPO_NAME_WITH_OWNER=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 
 detect_commit_type() {
   local files="$1"
@@ -81,7 +82,9 @@ git commit -m "$PR_TITLE"
 git push -u origin HEAD
 
 # 7) PR Title 수정
-gh pr edit "$PR_NUMBER" --title "$PR_TITLE"
+gh api "repos/${REPO_NAME_WITH_OWNER}/pulls/${PR_NUMBER}" \
+  --method PATCH \
+  -f title="$PR_TITLE" >/dev/null
 
 # 결과 출력
 echo ""
