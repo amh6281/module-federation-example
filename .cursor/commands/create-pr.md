@@ -17,18 +17,18 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 - 기존 PR 있으면 commit/push/PR 생성 없이 URL만 출력 후 종료
 - PR 본문: `.github/pull_request_template.md` 우선 사용
 - PR 생성 후: `cursor-generated` 라벨 + assignee + CODEOWNERS 기반 reviewer 설정
+- 커맨드 실행 시 자연어로 커밋/PR 제목 직접 지정 가능
+  - ex) `/create-pr 커밋은 버튼 수정, PR은 버튼 컴포넌트 개선`
 
 ## 1. 상태 확인
 
-```
-git status --short
-git branch --show-current          # 빈 값이면 detached HEAD → 중단
-git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "(no upstream)"
-git log --oneline -5
-git diff --name-only HEAD
-git diff --cached --name-only
-git diff --name-only --diff-filter=U   # 결과 있으면 conflict → 중단
-```
+!`git status --short`
+!`git branch --show-current` ← 빈 값이면 detached HEAD → 중단
+!`git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "(no upstream)"`
+!`git log --oneline -5`
+!`git diff --name-only HEAD`
+!`git diff --cached --name-only`
+!`git diff --name-only --diff-filter=U` ← 결과 있으면 conflict → 중단
 
 ## 2. 이슈 번호 추출
 
@@ -43,11 +43,13 @@ git diff --name-only --diff-filter=U   # 결과 있으면 conflict → 중단
 - 변경사항: `git diff --name-only HEAD` 결과 있거나 staged 파일 있으면 해당
 - push 필요: upstream 없거나 `git rev-list --left-right --count @{u}...HEAD` ahead ≥ 1
 
-## 4. PR 제목 생성
+## 4. 커밋 메시지 생성
+
+변경사항이 있을 때만 생성합니다. **변경 파일 경로 기반**으로 결정합니다.
 
 **형식:** `<Type>(<ISSUE>): <Summary>`
 
-**Commit Type 우선순위** (파일 경로 기반):
+**Commit Type 우선순위:**
 
 | 우선순위 | 조건                                                    | Type       |
 | -------- | ------------------------------------------------------- | ---------- |
@@ -63,21 +65,18 @@ git diff --name-only --diff-filter=U   # 결과 있으면 conflict → 중단
 | 10       | `package.json` lock파일 `Dockerfile` `workflow` asset   | `Chore`    |
 | 11       | 그 외                                                   | `Chore`    |
 
-**Summary 생성 규칙:**
+**Summary 규칙:**
 
+- 사용자가 자연어로 커밋 제목을 지정했으면 그 값을 최우선으로 사용
+- 지정하지 않은 경우 변경 파일 최대 5개 기반, 파일명 나열 말고 무엇을 바꿨는지 문구로
 - 최대 50자, 마침표·특수기호 제거, 개조식 구문
-- 변경사항 있을 때: 변경 파일 최대 5개 기반, 파일명 나열 말고 무엇을 바꿨는지 문구로
-- PR 커밋 2개 이상: 커밋 제목에서 summary 추출 후 합침, Type은 모두 같으면 그대로 아니면 `Chore`
-- 커밋 1개 + 변경사항 없음: 기존 커밋 제목이 `Type(ISSUE): summary` 형식이면 재사용, 아니면 `Chore(<ISSUE>): 작업 반영`
 - 비어 있으면 기본값 `작업 반영`
 
 예: `Refactor(ABC-123): 타이틀 구조 정리 텍스트 스타일 분리`
 
 ## 5. 기존 PR 확인
 
-```
-gh pr list --state open --head "$(git branch --show-current)" --json number,url --jq '.[0] // empty'
-```
+!`gh pr list --state open --head "$(git branch --show-current)" --json number,url --jq '.[0] // empty'`
 
 결과 있으면 → commit/push/PR 생성 중단, URL 출력 후 종료
 
@@ -85,22 +84,38 @@ gh pr list --state open --head "$(git branch --show-current)" --json number,url 
 
 변경사항 있을 때만:
 
-```
-git add -A
-git commit -m "<PR_TITLE>"
-```
+!`git add -A`
+!`git commit -m "<COMMIT_TITLE>"`
 
 ## 7. Push
 
 새 커밋 생성했거나, upstream보다 ahead이거나, upstream 없으면:
 
-```
-git push -u origin HEAD
-```
+!`git push -u origin HEAD`
 
 push 실패 시 PR 생성 중단
 
-## 8. PR 본문 생성
+## 8. PR 제목 생성
+
+push 완료 후 **전체 커밋 목록 기반**으로 PR 제목을 생성합니다.
+
+!`git log --format=%s @{u}..HEAD` ← upstream 있을 때
+!`git log --format=%s -20` ← upstream 없을 때
+
+**PR 제목 생성 규칙:**
+
+- 사용자가 자연어로 PR 제목을 지정했으면 그 값을 최우선으로 사용
+- 커밋 1개: 해당 커밋 제목을 그대로 PR 제목으로 사용
+- 커밋 2개 이상: 각 커밋 제목에서 summary 추출 후 합침, Type은 모두 같으면 그대로 아니면 `Chore`
+- 최대 50자, 마침표·특수기호 제거
+- 비어 있으면 기본값 `Chore(<ISSUE>): 작업 반영`
+
+예:
+
+- 커밋 1개 → `Refactor(ABC-123): 타이틀 구조 정리`
+- 커밋 2개 → `Chore(ABC-123): 타이틀 구조 정리 API 연동`
+
+## 9. PR 본문 생성
 
 `.github/pull_request_template.md` 있으면:
 
@@ -131,25 +146,21 @@ Checklist 체크 기준:
 - 변경사항 반영
 ```
 
-## 9. PR 생성
+## 10. PR 생성
 
-```
-gh pr create --base develop --title "<PR_TITLE>" --body "<PR_BODY>"
-```
+!`gh pr create --base develop --title "<PR_TITLE>" --body "<PR_BODY>"`
 
 PR 번호와 URL 확인
 
-## 10. 후처리
+## 11. 후처리
 
-```
-gh api user --jq .login   # 현재 사용자 확인
-```
+!`gh api user --jq .login` ← 현재 사용자 확인
 
 1. `cursor-generated` 라벨 없으면 생성 후 PR에 추가
 2. 현재 사용자 assignee 추가
 3. `.github/CODEOWNERS` 있으면 reviewer 추출, assignee 본인 제외 후 추가 (실패해도 유지)
 
-## 11. 결과 출력
+## 12. 결과 출력
 
 - PR Title / PR URL / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부
 
