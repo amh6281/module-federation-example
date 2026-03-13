@@ -57,6 +57,47 @@ detect_commit_type() {
   echo "$type"
 }
 
+# Commit의 요약 텍스트만 추출
+extract_commit_summary() {
+  local title="$1"
+  local issue_number="$2"
+
+  if [[ "$title" =~ ^([A-Za-z]+)\(([A-Z]+-[0-9]+)\):[[:space:]]*(.*)$ ]]; then
+    if [ "${BASH_REMATCH[2]}" = "$issue_number" ] && [ -n "${BASH_REMATCH[3]}" ]; then
+      printf "%s" "${BASH_REMATCH[3]}"
+      return
+    fi
+  fi
+
+  printf "%s" "$title"
+}
+
+# 커밋들을 조합해 PR 제목용 summary 생성
+build_summary_from_commits() {
+  local commit_range="$1"
+  local issue_number="$2"
+  local summaries
+
+  [ -z "$commit_range" ] && return 0
+
+  summaries="$(
+    git log --format=%s --reverse "$commit_range" 2>/dev/null \
+      | while IFS= read -r title; do
+          [ -z "$title" ] && continue
+          extract_commit_summary "$title" "$issue_number"
+          printf '\n'
+        done \
+      | awk 'NF && !seen[$0]++' \
+      | head -n 3
+  )"
+
+  [ -z "$summaries" ] && return 0
+
+  printf "%s" "$summaries" \
+    | awk 'BEGIN { first = 1 } NF { if (!first) printf " / "; printf "%s", $0; first = 0 }' \
+    | cut -c1-40
+}
+
 
 # 1) 브랜치 / 이슈 정보 감지
 BRANCH_NAME=$(git branch --show-current)
@@ -97,6 +138,13 @@ else
   HAS_UNPUSHED_COMMITS=true
 fi
 
+COMMIT_RANGE=""
+if git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
+  COMMIT_RANGE="${BASE_BRANCH}..HEAD"
+elif [ "$HAS_UPSTREAM" = true ]; then
+  COMMIT_RANGE="@{u}..HEAD"
+fi
+
 # 3) Commit / PR Title 생성
 if [ "$HAS_DIFF" = true ]; then
   COMMIT_TYPE=$(detect_commit_type "$DIFF_FILES")
@@ -110,14 +158,28 @@ if [ "$HAS_DIFF" = true ]; then
   )"
   [ -z "$SUMMARY_TEXT" ] && SUMMARY_TEXT="$DEFAULT_SUMMARY"
 else
-  LAST_COMMIT_TITLE=$(git log -1 --pretty=%s || true)
-  COMMIT_TYPE="Chore"
-  SUMMARY_TEXT="$DEFAULT_SUMMARY"
+  COMMIT_FILES=""
+  if [ -n "$COMMIT_RANGE" ]; then
+    COMMIT_FILES=$(git diff --name-only "$COMMIT_RANGE")
+  fi
 
-  if [[ "$LAST_COMMIT_TITLE" =~ ^([A-Za-z]+)\(([A-Z]+-[0-9]+)\):[[:space:]]*(.*)$ ]]; then
-    if [ "${BASH_REMATCH[2]}" = "$ISSUE_NUMBER" ]; then
-      COMMIT_TYPE="${BASH_REMATCH[1]}"
-      SUMMARY_TEXT="${BASH_REMATCH[3]}"
+  if [ -n "$COMMIT_FILES" ]; then
+    COMMIT_TYPE=$(detect_commit_type "$COMMIT_FILES")
+  else
+    COMMIT_TYPE="Chore"
+  fi
+
+  SUMMARY_TEXT=$(build_summary_from_commits "$COMMIT_RANGE" "$ISSUE_NUMBER")
+
+  if [ -z "$SUMMARY_TEXT" ]; then
+    LAST_COMMIT_TITLE=$(git log -1 --pretty=%s || true)
+    SUMMARY_TEXT="$DEFAULT_SUMMARY"
+
+    if [[ "$LAST_COMMIT_TITLE" =~ ^([A-Za-z]+)\(([A-Z]+-[0-9]+)\):[[:space:]]*(.*)$ ]]; then
+      if [ "${BASH_REMATCH[2]}" = "$ISSUE_NUMBER" ]; then
+        COMMIT_TYPE="${BASH_REMATCH[1]}"
+        SUMMARY_TEXT="${BASH_REMATCH[3]}"
+      fi
     fi
   fi
 fi
