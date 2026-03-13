@@ -1,7 +1,6 @@
 ---
 description: Generate commit and create a new pull request following the team convention.
 allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Bash(rg *), Bash(brew install gh)
-argument-hint: [summary]
 ---
 
 # Create Pull Request
@@ -66,7 +65,6 @@ git diff --name-only --diff-filter=U   # 결과 있으면 conflict → 중단
 
 **Summary 생성 규칙:**
 
-- argument로 summary가 전달되면 그 값을 최우선으로 사용
 - 최대 50자, 마침표·특수기호 제거, 개조식 구문
 - 변경사항 있을 때: 변경 파일 최대 5개 기반, 파일명 나열 말고 무엇을 바꿨는지 문구로
 - PR 커밋 2개 이상: 커밋 제목에서 summary 추출 후 합침, Type은 모두 같으면 그대로 아니면 `Chore`
