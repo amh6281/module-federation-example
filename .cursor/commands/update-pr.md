@@ -19,8 +19,8 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 - PR 생성은 하지 않고 기존 PR의 본문만 업데이트
 - `cursor-generated` 라벨은 없을 때만 보정
 - reviewer / assignee는 기존 설정 유지
-- 커맨드 실행 시 자연어로 커밋 제목 직접 지정 가능
-  - ex) `/update-pr 커밋 제목은 버튼 수정`
+- 커맨드 실행 시 자연어로 커밋/PR 제목 직접 지정 가능
+  - ex) `/update-pr 커밋 제목은 버튼 수정, PR 제목은 버튼 컴포넌트 개선`
 
 ## 1. 상태 확인
 
