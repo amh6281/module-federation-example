@@ -162,7 +162,7 @@ PR 번호와 URL 확인
 
 ## 12. 결과 출력
 
-- PR Title / PR URL / PR Number / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부 / 제목 업데이트 여부 / 본문 업데이트 여부
+- PR Title / PR URL / PR Number / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부 / 본문 생성 여부
 
 ## 실패 처리
 
