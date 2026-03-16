@@ -1,11 +1,11 @@
 ---
-description: Generate commit and create a new pull request following the team convention.
+description: Generate commit and update an existing pull request following the team convention.
 allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Bash(rg *), Bash(brew install gh)
 ---
 
-# Create Pull Request
+# Update Pull Request
 
-순서: `상태 확인 → 기존 PR 확인 → commit → push → PR 생성 → 후처리`
+순서: `상태 확인 → 기존 PR 확인 → commit → push → PR 수정 → 후처리`
 
 단계별로 확인하면서 진행합니다. 한 번에 실행하지 않습니다.
 
@@ -14,11 +14,13 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 - base 브랜치: `develop`
 - detached HEAD 또는 merge conflict 상태이면 즉시 중단
 - 변경사항 있으면 커밋, 미push 커밋 있으면 push
-- 기존 PR 있으면 commit/push/PR 생성 없이 URL만 출력 후 종료
+- 기존 PR이 없으면 commit/push/PR 수정 없이 중단
 - PR 본문: `.github/pull_request_template.md` 우선 사용
-- PR 생성 후: `cursor-generated` 라벨 + assignee + CODEOWNERS 기반 reviewer 설정
+- PR 생성은 하지 않고 기존 PR의 제목/본문만 업데이트
+- `cursor-generated` 라벨은 없을 때만 보정
+- reviewer / assignee는 기존 설정 유지
 - 커맨드 실행 시 자연어로 커밋/PR 제목 직접 지정 가능
-  - ex) `/create-pr 커밋 제목은 버튼 수정, PR 제목은 버튼 컴포넌트 개선`
+  - ex) `/update-pr 커밋 제목은 버튼 수정, PR 제목은 버튼 컴포넌트 개선`
 
 ## 1. 상태 확인
 
@@ -38,12 +40,18 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 예: `feature/ABC-123` → `ABC-123` / `bugfix/build` → `build`
 
-## 3. 변경사항 및 push 필요 여부
+## 3. 기존 PR 확인
+
+!`gh pr list --state open --head "$(git branch --show-current)" --json number,url,title --jq '.[0] // empty'`
+
+결과 없으면 → commit/push/PR 수정 없이 중단
+
+## 4. 변경사항 및 push 필요 여부
 
 - 변경사항: `git diff --name-only HEAD` 결과 있거나 staged 파일 있으면 해당
 - push 필요: upstream 없거나 `git rev-list --left-right --count @{u}...HEAD` ahead ≥ 1
 
-## 4. 커밋 메시지 생성
+## 5. 커밋 메시지 생성
 
 변경사항이 있을 때만 생성합니다. **변경 파일 경로 기반**으로 결정합니다.
 
@@ -74,12 +82,6 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 예: `Refactor(ABC-123): 타이틀 구조 정리 텍스트 스타일 분리`
 
-## 5. 기존 PR 확인
-
-!`gh pr list --state open --head "$(git branch --show-current)" --json number,url --jq '.[0] // empty'`
-
-결과 있으면 → commit/push/PR 생성 중단, URL 출력 후 종료
-
 ## 6. Commit
 
 변경사항 있을 때만:
@@ -93,7 +95,7 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 !`git push -u origin HEAD`
 
-push 실패 시 PR 생성 중단
+push 실패 시 PR 수정 중단
 
 ## 8. PR 제목 생성
 
@@ -146,23 +148,20 @@ Checklist 체크 기준:
 - 변경사항 반영
 ```
 
-## 10. PR 생성
+## 10. PR 수정
 
-!`gh pr create --base develop --title "<PR_TITLE>" --body "<PR_BODY>"`
+!`gh pr edit "<PR_NUMBER>" --title "<PR_TITLE>" --body "<PR_BODY>"`
 
 PR 번호와 URL 확인
 
 ## 11. 후처리
 
-!`gh api user --jq .login` ← 현재 사용자 확인
-
 1. `cursor-generated` 라벨 없으면 생성 후 PR에 추가
-2. 현재 사용자 assignee 추가
-3. `.github/CODEOWNERS` 있으면 reviewer 추출, assignee 본인 제외 후 추가 (실패해도 유지)
+2. assignee / reviewer는 기존 설정 유지
 
 ## 12. 결과 출력
 
-- PR Title / PR URL / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부
+- PR Title / PR URL / PR Number / 이슈 번호 / 커밋 생성 여부 / push 여부 / 제목 업데이트 여부 / 본문 업데이트 여부
 
 ## 실패 처리
 
@@ -170,6 +169,6 @@ PR 번호와 URL 확인
 | -------------------- | ------------------------------------- |
 | commit 전            | 현재 상태 설명 후 중단                |
 | commit 후 push 전    | 실패 원인 + 브랜치 상태 설명          |
-| push 후 PR 생성 실패 | push된 브랜치 + 마지막 커밋 제목 안내 |
+| push 후 PR 수정 실패 | push된 브랜치 + 마지막 커밋 제목 안내 |
 
 `git reset --hard` 등 파괴적 복구는 사용자 명시 요청 없이 수행하지 않음
