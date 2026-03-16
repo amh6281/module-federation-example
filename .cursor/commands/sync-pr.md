@@ -116,67 +116,34 @@ Checklist 체크 기준:
 
 ## 7. PR 생성 또는 업데이트
 
-PR 본문은 직접 문자열로 넘기지 말고 임시 파일로 저장해서 사용합니다.
-
 열린 PR이 없으면:
 
-!`gh pr create --base develop --title "<PR_TITLE>" --body-file "<PR_BODY_FILE>"`
+!`gh pr create --base develop --title "<PR_TITLE>" --body "<PR_BODY>"`
 
-열린 PR이 있으면 1차 시도:
+열린 PR이 있으면:
 
-!`gh pr edit <PR_NUMBER> --body-file "<PR_BODY_FILE>"`
-
-GraphQL 경고가 있거나 본문 반영이 확인되지 않으면 fallback:
-
-1. 저장소 정보 확인
-
-!`gh repo view --json nameWithOwner --jq .nameWithOwner`
-
-2. REST API로 본문 직접 업데이트
-
-!`gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER> --method PATCH --field body@"<PR_BODY_FILE>"`
-
-3. 업데이트 후 본문 검증
-
-!`gh pr view <PR_NUMBER> --json body --jq .body`
-
-기존 PR이 있을 때는 제목은 유지하고 본문만 최신 커밋 기준으로 업데이트합니다.
+!`gh pr edit <PR_NUMBER> --body "<PR_BODY>"`
 
 ## 8. 후처리
 
 !`gh api user --jq .login` ← 현재 사용자 확인
-!`gh repo view --json nameWithOwner --jq .nameWithOwner` ← 저장소 정보 확인
 
-1. `cursor-generated` 라벨 존재 확인
+PR 생성 시와 PR 업데이트 시 모두 후처리합니다.
 
-!`gh api repos/<OWNER>/<REPO>/labels/cursor-generated`
+1. `cursor-generated` 라벨 추가
 
-2. 없으면 라벨 생성
+!`gh api repos/:owner/:repo/issues/<PR_NUMBER>/labels --method POST --input - <<< '{"labels":["cursor-generated"]}'`
 
-!`gh api repos/<OWNER>/<REPO>/labels --method POST --field name='cursor-generated' --field color='0e8a16' --field description='Generated or updated via Cursor command'`
+2. 현재 사용자 assignee 추가
 
-3. PR에 라벨 추가
+!`gh api repos/:owner/:repo/issues/<PR_NUMBER>/assignees --method POST --input - <<< '{"assignees":["<USERNAME>"]}'`
 
-!`gh api repos/<OWNER>/<REPO>/issues/<PR_NUMBER>/labels --method POST --raw-field labels[]='cursor-generated'`
+3. `.github/CODEOWNERS` 있으면 reviewer 추출 후 assignee 본인 제외하고 추가
 
-4. 현재 사용자 assignee 추가
+!`gh api repos/:owner/:repo/pulls/<PR_NUMBER>/requested_reviewers --method POST --input - <<< '{"reviewers":["<USERNAME>"]}'`
 
-!`gh api repos/<OWNER>/<REPO>/issues/<PR_NUMBER>/assignees --method POST --raw-field assignees[]='<LOGIN>'`
-
-5. `.github/CODEOWNERS`가 있을 때만 reviewer 추출 후 추가
-
-!`test -f .github/CODEOWNERS && sed -n '1,200p' .github/CODEOWNERS`
-
-reviewer 추가 예:
-
-!`gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/requested_reviewers --method POST --raw-field reviewers[]='<REVIEWER>'`
-
-규칙:
-
-- 라벨 생성이 이미 되어 있으면 에러로 취급하지 않고 계속 진행
-- assignee 추가는 `issues` API를 사용
-- reviewer는 `.github/CODEOWNERS`가 없으면 건너뜀
-- reviewer 추가 실패는 전체 실패로 보지 않고 유지
+4. 이미 추가된 assignee/reviewer/label이 있더라도 필요한 값만 보강하고, 기존 설정은 유지합니다.
+5. 이 방식은 GraphQL 없이 REST API로 처리합니다.
 
 ## 9. 결과 출력
 
@@ -189,14 +156,12 @@ reviewer 추가 예:
 
 ## 실패 처리
 
-| 시점               | 처리                                      |
-| ------------------ | ----------------------------------------- |
-| 시작 전            | 현재 상태 설명 후 중단                    |
-| upstream 없음      | 먼저 push 필요 안내 후 중단               |
-| ahead 커밋 존재    | 먼저 push 필요 안내 후 중단               |
-| PR 생성 실패       | 현재 브랜치 + 마지막 커밋 제목 안내       |
-| PR 업데이트 실패   | 기존 PR 번호/URL + 실패 원인 안내         |
-| 본문 검증 실패     | API 재시도 여부와 마지막 확인 결과 안내   |
-| 라벨/assignee 실패 | 어떤 후처리가 실패했는지 구체적으로 안내  |
+| 시점             | 처리                                |
+| ---------------- | ----------------------------------- |
+| 시작 전          | 현재 상태 설명 후 중단              |
+| upstream 없음    | 먼저 push 필요 안내 후 중단         |
+| ahead 커밋 존재  | 먼저 push 필요 안내 후 중단         |
+| PR 생성 실패     | 현재 브랜치 + 마지막 커밋 제목 안내 |
+| PR 업데이트 실패 | 기존 PR 번호/URL + 실패 원인 안내   |
 
 `git reset --hard` 등 파괴적 복구는 사용자 명시 요청 없이 수행하지 않음
