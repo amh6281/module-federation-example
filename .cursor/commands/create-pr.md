@@ -38,12 +38,18 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 예: `feature/ABC-123` → `ABC-123` / `bugfix/build` → `build`
 
-## 3. 변경사항 및 push 필요 여부
+## 3. 기존 PR 확인
+
+!`gh pr list --state open --head "$(git branch --show-current)" --json number,url --jq '.[0] // empty'`
+
+결과 있으면 → commit/push/PR 생성 중단, URL 출력 후 종료
+
+## 4. 변경사항 및 push 필요 여부
 
 - 변경사항: `git diff --name-only HEAD` 결과 있거나 staged 파일 있으면 해당
 - push 필요: upstream 없거나 `git rev-list --left-right --count @{u}...HEAD` ahead ≥ 1
 
-## 4. 커밋 메시지 생성
+## 5. 커밋 메시지 생성
 
 변경사항이 있을 때만 생성합니다. **변경 파일 경로 기반**으로 결정합니다.
 
@@ -73,12 +79,6 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 - 비어 있으면 기본값 `작업 반영`
 
 예: `Refactor(ABC-123): 타이틀 구조 정리 텍스트 스타일 분리`
-
-## 5. 기존 PR 확인
-
-!`gh pr list --state open --head "$(git branch --show-current)" --json number,url --jq '.[0] // empty'`
-
-결과 있으면 → commit/push/PR 생성 중단, URL 출력 후 종료
 
 ## 6. Commit
 
@@ -162,7 +162,7 @@ PR 번호와 URL 확인
 
 ## 12. 결과 출력
 
-- PR Title / PR URL / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부
+- PR Title / PR URL / PR Number / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부 / 본문 생성 여부
 
 ## 실패 처리
 

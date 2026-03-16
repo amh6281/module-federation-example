@@ -16,11 +16,11 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 - 변경사항 있으면 커밋, 미push 커밋 있으면 push
 - 기존 PR이 없으면 commit/push/PR 수정 없이 중단
 - PR 본문: `.github/pull_request_template.md` 우선 사용
-- PR 생성은 하지 않고 기존 PR의 제목/본문만 업데이트
+- PR 생성은 하지 않고 기존 PR의 본문만 업데이트
 - `cursor-generated` 라벨은 없을 때만 보정
 - reviewer / assignee는 기존 설정 유지
-- 커맨드 실행 시 자연어로 커밋/PR 제목 직접 지정 가능
-  - ex) `/update-pr 커밋 제목은 버튼 수정, PR 제목은 버튼 컴포넌트 개선`
+- 커맨드 실행 시 자연어로 커밋 제목 직접 지정 가능
+  - ex) `/update-pr 커밋 제목은 버튼 수정`
 
 ## 1. 상태 확인
 
@@ -97,27 +97,7 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 push 실패 시 PR 수정 중단
 
-## 8. PR 제목 생성
-
-push 완료 후 **전체 커밋 목록 기반**으로 PR 제목을 생성합니다.
-
-!`git log --format=%s @{u}..HEAD` ← upstream 있을 때
-!`git log --format=%s -20` ← upstream 없을 때
-
-**PR 제목 생성 규칙:**
-
-- 사용자가 자연어로 PR 제목을 지정했으면 그 값을 최우선으로 사용
-- 커밋 1개: 해당 커밋 제목을 그대로 PR 제목으로 사용
-- 커밋 2개 이상: 각 커밋 제목에서 summary 추출 후 합침, Type은 모두 같으면 그대로 아니면 `Chore`
-- 최대 50자, 마침표·특수기호 제거
-- 비어 있으면 기본값 `Chore(<ISSUE>): 작업 반영`
-
-예:
-
-- 커밋 1개 → `Refactor(ABC-123): 타이틀 구조 정리`
-- 커밋 2개 → `Chore(ABC-123): 타이틀 구조 정리 API 연동`
-
-## 9. PR 본문 생성
+## 8. PR 본문 생성
 
 `.github/pull_request_template.md` 있으면:
 
@@ -148,20 +128,20 @@ Checklist 체크 기준:
 - 변경사항 반영
 ```
 
-## 10. PR 수정
+## 9. PR 본문 수정
 
-!`gh pr edit "<PR_NUMBER>" --title "<PR_TITLE>" --body "<PR_BODY>"`
+!`gh pr edit "<PR_NUMBER>" --body "<PR_BODY>"`
 
 PR 번호와 URL 확인
 
-## 11. 후처리
+## 10. 후처리
 
 1. `cursor-generated` 라벨 없으면 생성 후 PR에 추가
 2. assignee / reviewer는 기존 설정 유지
 
-## 12. 결과 출력
+## 11. 결과 출력
 
-- PR Title / PR URL / PR Number / 이슈 번호 / 커밋 생성 여부 / push 여부 / 제목 업데이트 여부 / 본문 업데이트 여부
+- PR Title / PR URL / PR Number / PR Type / 이슈 번호 / 커밋 생성 여부 / push 여부 / 본문 업데이트 여부
 
 ## 실패 처리
 
