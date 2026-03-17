@@ -5,9 +5,7 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 # Sync Pull Request
 
-이 커맨드는 커밋을 만들지 않는다. 미완성 작업이 있다면 먼저 `/commit` 으로 커밋·push를 완료한 뒤 실행한다.
-
----
+> 이 커맨드는 커밋을 만들지 않는다. 미완성 작업이 있다면 먼저 `/commit` 으로 커밋·push를 완료한 뒤 실행한다.
 
 ## 실행 전 중단 조건
 
