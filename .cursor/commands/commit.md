@@ -45,12 +45,11 @@ staged 파일의 성격을 보고 아래 우선순위대로 하나를 고른다.
 | 3        | 파일/폴더 이동·이름 변경 중심                           | `Rename`   |
 | 4        | `test` `tests` `spec` 포함, 비즈니스 로직 변경 없음     | `Test`     |
 | 5        | `.css` `.scss` `style` 포함                             | `Style`    |
-| 6        | `.md` `docs` 또는 주석 중심                             | `Comment`  |
-| 7        | 신규 기능·화면·API 연동                                 | `Feat`     |
-| 8        | 버그·예외처리·typo 수정                                 | `Fix`      |
-| 9        | `src` `app` `components` `pages` `hooks` 또는 구조 개선 | `Refactor` |
-| 10       | `package.json` lock파일 `Dockerfile` `workflow` asset   | `Chore`    |
-| 11       | 그 외                                                   | `Chore`    |
+| 6        | 신규 기능·화면·API 연동                                 | `Feat`     |
+| 7        | 버그·예외처리·typo 수정                                 | `Fix`      |
+| 8        | `src` `app` `components` `pages` `hooks` 또는 구조 개선 | `Refactor` |
+| 9        | `package.json` lock파일 `Dockerfile` `workflow` asset   | `Chore`    |
+| 10       | 그 외                                                   | `Chore`    |
 
 ### Summary
 
