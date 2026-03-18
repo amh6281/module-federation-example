@@ -61,12 +61,14 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 확인 커맨드 예시:
 
-!`git branch --show-current`
-!`gh pr list --state open --head "$(git branch --show-current)" --json number,title,url,author,baseRefName,headRefName,reviewDecision --jq '.[0] // empty'`
-!`gh pr view <PR_NUMBER> --json number,title,url,author,baseRefName,headRefName,reviewDecision,commits`
-!`gh pr diff <PR_NUMBER>`
-!`gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments`
-!`gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/reviews`
+```
+git branch --show-current
+gh pr list --state open --head "$(git branch --show-current)" --json number,title,url,author,baseRefName,headRefName,reviewDecision --jq '.[0] // empty'
+gh pr view <PR_NUMBER> --json number,title,url,author,baseRefName,headRefName,reviewDecision,commits
+gh pr diff <PR_NUMBER>
+gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments
+gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/reviews
+```
 
 리뷰 근거는 반드시 **현재 PR diff** 에서 찾는다. base 브랜치 바깥 맥락이 필요하면 관련 파일을 추가로 읽되, 코멘트는 diff에 드러난 문제에 한정한다.
 
@@ -75,33 +77,41 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 ## 2. 리뷰 기준
 
 아래 우선순위 티어 순서대로 **각 항목을 빠짐없이** 검토한다. 낮은 티어 항목은 높은 티어 이슈가 없을 때만 코멘트한다.
+단, **상위 티어 이슈가 없더라도 Low가 구체적이고 diff에서 재현 가능하면 코멘트를 남긴다.**
+즉 `Critical–Medium 없음 + Low 있음` 은 `Type: none` 이 아니라 **`Type: comment` 대상** 이다.
 
-### P0 — 즉시 차단 수준
+### Critical — 즉시 차단 수준
 
 - **런타임 크래시**: null/undefined 역참조, 배열 범위 초과, 잘못된 타입 연산
 - **보안 취약점**: SQL/Command injection, XSS(사용자 입력이 DOM에 직접 삽입), 민감정보(토큰·비밀번호·PII) 로그 출력 또는 클라이언트 노출, 인증·인가 우회
 - **데이터 손실**: 덮어쓰기, 삭제 후 복구 불가, 트랜잭션 누락
 
-### P1 — 높은 위험
+### High — 높은 위험
 
 - **기존 동작 회귀**: 변경 전 정상이던 경로가 깨질 가능성
 - **동시성·비동기 문제**: race condition, 공유 상태 비원자적 수정, `catch` 없는 `.then` 또는 unhandled rejection, 불필요한 직렬 await로 인한 성능 저하
 - **무한 루프 또는 재귀 탈출 조건 누락**
 - **중복 호출·중복 실행**: 동일 API 다중 호출, 이벤트 리스너 누적 등록
 
-### P2 — 중간 위험
+### Medium — 중간 위험
 
 - **예외 처리 누락**: 외부 I/O(API, DB, 파일)에서 에러를 전파하지 않거나 무시
 - **타입·계약 불일치**: 함수 시그니처와 실제 전달값 불일치, 암묵적 타입 강제 변환
 - **사이드이펙트 범위 초과**: 함수가 의도하지 않은 전역 상태·외부 리소스를 변경
 - **의존성 문제**: 순환 의존, 사용하지 않는 import, 버전 고정 누락
 
-### P3 — 낮은 위험 (P0–P2 이슈 없을 때만)
+### Low — 낮은 위험 (Critical–Medium 이슈 없을 때만)
 
 - **테스트 누락**: 변경된 로직에 대한 단위/통합 테스트가 전혀 없는 경우
 - **검증 부족**: 입력값 범위·형식 검증 없이 바로 사용
 - **성능 급락**: O(n²) 이상 알고리즘, 반복문 내 무거운 I/O
 - **가독성·스타일**: 명백히 혼란을 유발하는 경우에 한정
+
+Low 코멘트는 아래 조건을 모두 만족할 때 남긴다.
+
+- 현재 diff의 변경과 직접 연결된다
+- 취향 차이가 아니라 **유지보수성, 검증 공백, 성능 저하 가능성** 중 하나로 설명 가능하다
+- 왜 문제가 되는지 한두 문장으로 구체화할 수 있다
 
 ### 코멘트를 남기지 않는 경우
 
@@ -120,21 +130,22 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 - 가능한 한 해당 코드 줄에 직접 연결한다
 - 파일 전체 총평이 아니라 **왜 문제가 되는지** 를 짧고 명확하게 설명한다
 - **언제 깨지는지 / 어떤 입력에서 위험한지 / 무엇이 누락됐는지** 를 반드시 포함한다
+- Low라면 **어떤 유지보수 비용, 검증 공백, 성능 문제** 가 생기는지 구체적으로 적는다
 - 해결책은 강요하지 말고, 필요하면 한 줄 정도로 제안한다
-- 한국어로 작성한다
+- 한국어로 일관되게 작성한다
 - 한 코멘트에는 한 가지 이슈만 담는다
 - 칭찬성 코멘트나 스타일 선호는 기본적으로 남기지 않는다
-- 우선순위 레이블을 앞에 붙인다: `[P0]`, `[P1]`, `[P2]`, `[P3]`
+- 심각도 레이블을 앞에 붙인다: `[Critical]`, `[High]`, `[Medium]`, `[Low]`
 
 좋은 예:
 
 ```text
-[P0] `data`가 undefined인 첫 렌더에서 아래 `.map()` 호출 시 런타임 에러가 발생합니다.
+[Critical] `data`가 undefined인 첫 렌더에서 아래 `.map()` 호출 시 런타임 에러가 발생합니다.
 로딩 전 초기값(`[]`) 또는 옵셔널 체이닝(`data?.map(...)`)으로 가드가 필요해 보입니다.
 ```
 
 ```text
-[P1] 이 함수는 `catch` 없이 `.then`만 체이닝하고 있어 unhandled rejection이 발생할 수 있습니다.
+[High] 이 함수는 `catch` 없이 `.then`만 체이닝하고 있어 unhandled rejection이 발생할 수 있습니다.
 `.catch(err => ...)` 또는 `try/await` 블록으로 감싸는 게 안전합니다.
 ```
 
@@ -146,7 +157,7 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 ---
 
-## 4. inline review comment 생성
+## 4. Inline Review Comment 생성
 
 이슈가 확인되면 GitHub PR diff line에 붙는 **inline review comment** 로 남긴다.
 
@@ -183,10 +194,12 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 ## 5. 코멘트가 없을 때 처리
 
 남길 만한 구체적 이슈를 찾지 못하면 리뷰 코멘트를 생성하지 않는다.
+여기서 "구체적 이슈"에는 **Low: 테스트 누락 / 검증 부족 / 성능 문제 / 혼란을 유발하는 가독성 문제** 도 포함된다.
+따라서 **Critical–Medium이 없다는 이유만으로 Low 코멘트를 생략하면 안 된다.**
 
 - `LGTM` 같은 짧은 코멘트를 억지로 남기지 않는다
 - 승인도 자동으로 하지 않는다
-- 사용자는 "문제 발견 없음" 상태만 간단히 전달받는다
+- 사용자는 **모든 티어(Critical–Low)에서 코멘트할 만한 구체적 이슈가 하나도 없을 때만** "문제 발견 없음" 상태를 전달받는다
 
 ---
 
@@ -196,27 +209,28 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(jq *), Bash(sed *), Bash(awk *), Ba
 
 ### 이슈가 있는 경우
 
-```text
-Reviewed: yes
-PR      : <URL>
-Number  : #<번호>
-Type    : comment
-Comments: <개수>
+```
+Reviewed : yes
+PR       : <URL>
+Number   : #<번호>
+Type     : comment
+Comments : <개수>
 
-[P0] <핵심 이슈 1줄 요약>
-[P1] <핵심 이슈 1줄 요약>
-[P2] <핵심 이슈 1줄 요약>
+[Critical] <핵심 이슈 1줄 요약>
+[High]     <핵심 이슈 1줄 요약>
+[Medium]   <핵심 이슈 1줄 요약>
+[Low]      <핵심 이슈 1줄 요약>
 ```
 
 ### 이슈가 없는 경우
 
-```text
-Reviewed: yes
-PR      : <URL>
-Number  : #<번호>
-Type    : none
-Comments: 0
-Result  : 남길 만한 구체적 이슈를 찾지 못함
+```
+Reviewed : yes
+PR       : <URL>
+Number   : #<번호>
+Type     : none
+Comments : 0
+Result   : No actionable issues found.
 ```
 
 ---
