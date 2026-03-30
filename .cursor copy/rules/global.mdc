@@ -1,0 +1,24 @@
+---
+description: Global rules applied across the project.
+globs: ['**/*.{ts,tsx,js,jsx}']
+alwaysApply: true
+---
+
+## Rule Priority (on conflict)
+
+When rules conflict, apply in this order:
+
+1. **Boundary** (this file): Minimal changes and no unnecessary refactoring — takes precedence over all other rules.
+2. **Domain-specific > Generic**: Domain rules (api.mdc, architecture.mdc) override generic rules (react.mdc, typescript.mdc).
+3. **Narrower glob > Broader glob**: Rules matching narrower paths take precedence (e.g. `**/api/**` > `**/*.ts`).
+4. **Type safety**: Type safety rules take precedence over implementation convenience.
+
+## Boundary
+
+- Prefer minimal changes to existing code.
+- Avoid unnecessary refactoring.
+
+## Imports
+
+- Use `@/` path alias for imports from `src/` (e.g. `@/components/`, `@/hooks/`).
+- Prefer named exports over default exports for better tree-shaking and refactoring.

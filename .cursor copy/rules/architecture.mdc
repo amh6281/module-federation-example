@@ -1,0 +1,86 @@
+---
+description: Project structure and tech stack guide. Reference when creating files, modifying code, or answering structure-related questions.
+globs: ['**/*.{ts,tsx}']
+alwaysApply: false
+---
+
+# Atomic Design & Component Architecture
+
+Apply this rule when adding or refactoring UI under `src/components/` or when structuring new pages. The project uses **React Router** (Vite), not Next.js: routes live in `src/routes/`, path constants in `src/constants/Paths.ts`.
+
+## Layer Definitions
+
+| Layer         | Description                                                                       |
+| ------------- | --------------------------------------------------------------------------------- |
+| **Atoms**     | Smallest building blocks (Button, Input, Label, Icon). No business logic.         |
+| **Molecules** | Compositions of Atoms. No business logic; presentational only.                    |
+| **Organisms** | Compositions of Atoms + Molecules. May hold view logic (state, handlers).         |
+| **Templates** | Page-level layout just before data binding. No data fetching.                     |
+| **Pages**     | Data binding + template wiring. Live in `src/routes/pages/`. Only pass data down. |
+
+## Folder Structure (aligned with this repo)
+
+### Pages (routing)
+
+- **Location**: `src/routes/pages/<Feature>Page.tsx`
+- **Examples**: `MyReservationsPage.tsx`, `ResourceTypeManagePage.tsx`, `ResourceTypeSettingPage.tsx`
+- **Rules**:
+    - Add path constants in `src/constants/Paths.ts`.
+    - Pages do **not** contain other components; they only fetch/bind data and render a Template (or current feature components until templates exist).
+
+### Feature components (page-scoped)
+
+- **Location**: `src/components/<Feature>/`
+- **&lt;Feature&gt;** matches the page/route name (PascalCase), e.g. `MyReservations`, `ResourceTypeManage`, `ResourceTypeReservations`, `ResourceReservations`, `ResourceTypeSetting`.
+- **Subfolders** (create when adopting atomic design for that feature):
+    - `atoms/`
+    - `molecules/`
+    - `organisms/`
+    - `templates/`
+- **Example**:
+    - `src/components/MyReservations/atoms/`
+    - `src/components/MyReservations/molecules/`
+    - `src/components/MyReservations/organisms/`
+    - `src/components/MyReservations/templates/`
+
+### Common components (shared)
+
+- **Location**: `src/components/common/`
+- For shared UI used across multiple features:
+    - Optionally group by layer: `common/atoms/`, `common/molecules/`, `common/organisms/`, `common/templates/`.
+    - Or keep current flat/feature grouping (e.g. `common/Modal/`, `common/SearchBar/`) and gradually introduce layer subfolders as needed.
+- **Reusable organisms** (e.g. Tree, Modal compound): use compound component pattern under one folder, e.g. `common/organisms/Tree/Tree.tsx`, `common/organisms/Tree/Usage.tsx` (or `common/Modal/` as today).
+
+### Type Definitions
+
+- `src/@types/`: Global TypeScript declarations (extending libraries, global.d.ts, image.d.ts)
+- `src/modules/types/`: Domain-specific type definitions
+- Use domain-specific types in `src/modules/types/` for business logic.
+- When introducing a new domain/resource, define its types in `src/modules/types/<Domain>.ts` (e.g. `src/modules/types/Reservations.ts`) and reuse them across components/hooks/utils related to that domain.
+
+### Hooks & Business Logic
+
+- Shared/global hooks:
+    - **Location**: `src/hooks/`
+    - Examples: authentication, layout, common filter state, or anything reused across multiple pages.
+- Feature-scoped hooks:
+    - **Location**: `src/components/<Feature>/hooks/`
+    - Handle state/business logic used only within a specific Feature (e.g. MyReservations sorting/filtering state, resource type management form state).
+- Organism components may own view-level logic (state, handlers), but complex business rules/data transformations should be **extracted into custom hooks** to improve reusability and testability.
+
+### Tests
+
+- Page/routing tests:
+    - **Location**: `src/routes/pages/__tests__/` or in the same directory as the page file as `<Feature>Page.test.tsx`.
+    - Focus on verifying routing, data binding, and that templates are composed as intended.
+- Component/hook tests:
+    - **Location**: next to the component/hook with `*.test.tsx` / `*.test.ts` (e.g. `MyReservationsControl.test.tsx`, `useMyReservationsFilter.test.ts`).
+    - Focus on UI behavior (rendering, interactions) and the business logic encapsulated in hooks.
+
+## Naming Conventions
+
+- **Route / path**: Constants in `Paths.ts` (e.g. `MY_RESERVATIONS`, `RESOURCE_TYPES_MANAGE`).
+- **Page files**: `<Feature>Page.tsx` in `src/routes/pages/`.
+- **Feature folder**: PascalCase, aligned with feature name (`MyReservations`, `ResourceTypeManage`).
+- **Component files**: PascalCase (`MyReservationsControl.tsx`, `ResourceTypeRow.tsx`).
+- **Imports**: Use `@/` alias (global.mdc). Paths: `@/components/<Feature>/...`, `@/components/common/...`. Prefer `host/design-system` when a component exists there.

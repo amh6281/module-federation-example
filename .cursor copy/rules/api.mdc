@@ -1,0 +1,203 @@
+---
+description: Standardizes API call conventions for improved readability, type safety, and maintainability.
+globs: ['**/api/**/*.ts', '**/api/**/*.tsx']
+---
+
+Applies to all files under `src/modules/api/**/*.ts`.
+
+Goals:
+
+- Clear separation at API boundaries
+- Minimize runtime errors through strong typing
+- Keep request/response patterns predictable
+- Centralize error handling in one place
+
+## 1) Domain-based API Modules (Required)
+
+- Split APIs by domain. Examples: `member`, `reserve`, `calendar`.
+- Each domain's `index.ts` creates an Axios instance and applies interceptors.
+
+```ts
+import axios from 'axios';
+import setupInterceptors from '../setupInterceptors';
+
+export const reserveApi = axios.create({});
+
+setupInterceptors(reserveApi);
+```
+
+---
+
+## 2) Generic Response Types Are Required
+
+- Always attach a generic to API responses (`get<T>`, `post<T>`, etc.).
+- Why: Locks the `data` structure at compile time, enabling safe use downstream.
+
+```ts
+const response = await reserveApi.get<PagedResponse<Reservation>>(uri);
+const { data } = await reserveApi.get<ResourceTypeState>(uri);
+```
+
+> `const response = await reserveApi.get(uri)` weakens the type and increases the chance of mistakes during feature development.
+
+---
+
+## 3) Parameters Follow the RORO Pattern
+
+- Accept multiple inputs as a single object.
+- Single values can be passed directly.
+
+```ts
+export const getReservationsByType = async (params: {
+	resourceTypeId: number;
+	startDateTime: string;
+	endDateTime: string;
+	searchData?: { search: string; searchTargets: string };
+	timeGmt?: string;
+}) => {
+	const { resourceTypeId, startDateTime, endDateTime, searchData, timeGmt } = params;
+	// ...
+};
+
+export const getResourceType = async (resourceTypeId: number) => {
+	// ...
+};
+```
+
+---
+
+## 4) async/await Only
+
+- API functions must use `async`/`await` exclusively.
+- Promise chaining is discouraged at the API layer.
+
+```ts
+export const createResourceType = async (resourceType: Partial<ResourceType>) => {
+	const { data } = await reserveApi.post<ResourceTypeWithMember>('/api/v1/reserve/resource-types', resourceType);
+	return data;
+};
+```
+
+---
+
+## 5) Return `data` as the Standard
+
+- Default to `return data`.
+- When transformation is needed, compose on top of `data`.
+
+```ts
+const { data } = await reserveApi.get<PagedResponse<Reservation>>(uri);
+return {
+	...data,
+	timeGmt,
+};
+```
+
+---
+
+## 6) Function Names Follow HTTP Verb + Resource
+
+- Consistently use `get*`, `create*`, `update*`, `delete*`.
+- Avoid ambiguous prefixes like `fetch*` or `post*`.
+
+```ts
+export const getReservation = async (...) => {};
+export const createReservation = async (...) => {};
+export const updateReservation = async (...) => {};
+export const deleteReservation = async (...) => {};
+```
+
+---
+
+## 7) Build Query Strings Explicitly
+
+- Use template literals for short queries to keep them readable.
+- Consider `URLSearchParams` when multiple conditions or encoding is required.
+
+```ts
+const searchQuery = (searchData: { search: string; searchTargets: string }) =>
+	`&searchTargets=${searchData.searchTargets}&search=${encodeURIComponent(searchData.search)}`;
+
+const uri = `/api/v1/reserve/resource-types/${resourceTypeId}/reservations?startDateTime=${startDateTime}&endDateTime=${endDateTime}${
+	searchData ? searchQuery(searchData) : ''
+}&limit=10000`;
+```
+
+---
+
+## 8) Shared Logic Lives in `setupInterceptors`
+
+- Auth headers, token refresh, and error transformation are handled centrally in interceptors.
+- API files should focus solely on business request/response logic.
+
+---
+
+## 9) Use `ServerError` for Error Types
+
+- Base error handling on the `ServerError` type defined in the interceptor.
+- Use this type when branching on server codes or mapping user-facing messages to ensure type safety.
+
+```ts
+import type { ServerError } from '@/modules/api/setupInterceptors';
+```
+
+---
+
+## 10) Named Exports by Default
+
+- Export individual functions with `export const`.
+- Avoid default exports to keep tree-shaking and import tracing straightforward.
+
+```ts
+export const getResourceType = async (...) => {};
+export const createResourceType = async (...) => {};
+```
+
+---
+
+## 11) Create/Update Payloads Use `Partial<T>`
+
+- Declare request bodies for create and update operations as `Partial<T>` for flexibility.
+
+```ts
+export const createResourceType = async (resourceType: Partial<ResourceType>) => {};
+export const updateResourceType = async (resourceType: Partial<ResourceType>) => {};
+```
+
+---
+
+## 12) Group Related APIs in One File
+
+- All APIs for the same REST resource belong in a single file by default.
+- CRUD, search, and query functions for the same resource are managed together.
+- API functions should avoid side effects wherever possible. (e.g. do not trigger routing, modal toggles, or state changes from within an API function.)
+
+Example: `reservation.ts`
+
+```ts
+export const getReservationsByType = async (...) => {};
+export const getReservationsByResource = async (...) => {};
+export const getMyReservations = async (...) => {};
+export const createReservation = async (...) => {};
+export const updateReservation = async (...) => {};
+export const deleteReservation = async (...) => {};
+export const getReservationCustomFields = async (...) => {};
+```
+
+**When to split** (if any of the following apply)
+
+- 10 or more API functions in one file
+- File exceeds 300 lines
+- Endpoint responsibilities are clearly distinct
+
+**Examples of acceptable splits**
+
+- `reservation.ts`
+- `reservationStats.ts`
+- `reservationHistory.ts`
+
+**Avoid**
+
+- `reservationQuery.ts`
+- `reservationCommand.ts`
+- Arbitrary splits based on personal preference or developer taste

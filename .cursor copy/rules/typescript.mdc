@@ -1,0 +1,367 @@
+---
+description: Enforce consistent TypeScript patterns for React applications including typing conventions, component patterns, and maintainable type architecture.
+globs: ['**/*.ts', '**/*.tsx']
+---
+
+# TypeScript Rules
+
+This rule defines the TypeScript conventions for the project.
+
+Goals:
+
+- Strong type safety
+- Predictable architecture
+- Readable code
+- Minimal runtime overhead
+
+These rules apply to all TypeScript files.
+
+---
+
+## 1) Avoid `any`
+
+Never use `any`. Prefer `unknown`, generics, proper interfaces, or discriminated unions. This includes implicit `any` in callbacks — always type parameters explicitly or let TypeScript infer from context.
+
+```ts
+// Good
+const parse = (data: unknown) => {
+	if (typeof data === 'string') return data;
+};
+
+const numbers: number[] = [1, 2, 3];
+numbers.map(num => num * 2);
+
+// Avoid
+const parse = (data: any) => data;
+
+const numbers = [];
+numbers.map(num => num * 2); // num is implicitly any
+```
+
+Reason: `any` disables TypeScript safety, including in callback parameters.
+
+---
+
+## 2) Prefer Explicit React Function Components
+
+Do not use `React.FC`. Use explicit function components with typed props.
+
+```ts
+// Good
+interface Props { title: string }
+const Card = (props: Props) => <div>{props.title}</div>;
+
+// Avoid
+const Card: React.FC<Props> = ({ title }) => <div>{title}</div>;
+```
+
+Reason: `React.FC` implicitly includes `children` and hides component API.
+
+---
+
+## 3) Prefer `as const` + Union Types Instead of `enum`
+
+Avoid TypeScript `enum`. Use `as const` on all constant objects and arrays to preserve literal types.
+
+```ts
+// Good — object
+export const Paths = {
+	HOME: '/',
+	LOGIN: '/login',
+	PROFILE: '/profile',
+} as const;
+export type Path = (typeof Paths)[keyof typeof Paths];
+
+// Good — array
+const STATUS = ['idle', 'loading', 'success', 'error'] as const;
+type Status = (typeof STATUS)[number];
+
+// Avoid
+enum Paths {
+	HOME = '/',
+	LOGIN = '/login',
+	PROFILE = '/profile',
+}
+const STATUS = ['idle', 'loading', 'success', 'error']; // widens to string[]
+```
+
+Reason: `enum` produces runtime code and harms tree-shaking. `as const` preserves literal types like `"idle"` instead of widening to `string`, improving autocomplete and type safety.
+
+---
+
+## 4) Interface vs Type
+
+Use `interface` for object structures. Use `type` for unions, intersections, and compositions.
+
+```ts
+interface User {
+	id: string;
+	name: string;
+}
+
+type UserWithRole = User & { role: 'admin' | 'user' };
+type Status = 'idle' | 'loading' | 'success';
+```
+
+Reason: `interface` is better suited for object contracts, while `type` excels at composition and unions.
+
+---
+
+## 5) Prefer Named Types Instead of Inline Types
+
+Avoid large inline object types. Named types improve readability and reuse.
+
+```ts
+// Good
+interface Props {
+	user: User;
+	isAdmin: boolean;
+}
+
+// Avoid
+const Component = (props: { user: { id: string; name: string }; isAdmin: boolean }) => {};
+```
+
+---
+
+## 6) Prefer Explicit Return Types for Shared Functions
+
+Exported utilities should define return types to prevent accidental API changes.
+
+```ts
+const getUserName = (user: User): string => user.name;
+```
+
+---
+
+## 7) Prefer Discriminated Unions for State
+
+Use discriminated unions for state machines. Enables exhaustive checking and prevents impossible states.
+
+```ts
+type RequestState =
+	| { status: 'idle' }
+	| { status: 'loading' }
+	| { status: 'success'; data: User }
+	| { status: 'error'; message: string };
+```
+
+---
+
+## 8) Avoid Magic Strings
+
+```ts
+export const USER_ROLE = { ADMIN: 'admin', USER: 'user' } as const;
+export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
+```
+
+---
+
+## 9) Prefer `readonly` for Immutable Data
+
+Prevents accidental mutation.
+
+```ts
+interface Config { readonly apiUrl: string }
+// Arrays:
+readonly string[]
+```
+
+---
+
+## 10) Prefer Generics Over Duplication
+
+```ts
+const identity = <T>(value: T): T => value;
+```
+
+Reason: Avoids duplicated logic while maintaining type safety.
+
+---
+
+## 11) Prefer TypeScript Utility Types
+
+Use built-in utilities: `Partial<T>`, `Pick<T>`, `Omit<T>`, `Record<K,V>`, `ReturnType<T>`, `Parameters<T>`
+
+```ts
+type UserPreview = Pick<User, 'id' | 'name'>;
+```
+
+---
+
+## 12) Avoid Deep Nested Types
+
+Break nested types into separate interfaces for readability.
+
+```ts
+interface Address {
+	city: string;
+	zip: string;
+}
+interface User {
+	id: string;
+	address: Address;
+}
+```
+
+---
+
+## 13) Prefer Narrow Types Over Broad Types
+
+```ts
+// Good
+type Theme = 'light' | 'dark';
+// Avoid
+type Theme = string;
+```
+
+Reason: Improves autocomplete and safety.
+
+---
+
+## 14) Avoid Boolean Prop Explosion
+
+```tsx
+// Avoid
+<Button isPrimary isDanger />;
+
+// Prefer
+type ButtonVariant = 'primary' | 'danger';
+<Button variant="primary" />;
+```
+
+Reason: Boolean flags create invalid state combinations.
+
+---
+
+## 15) Prefer Object Parameters (RORO Pattern)
+
+```ts
+const createUser = (params: { name: string; age: number }) => ({
+	id: crypto.randomUUID(),
+	...params,
+});
+```
+
+Reason: Improves readability and extensibility.
+
+---
+
+## 16) Use `import type` for Type Imports
+
+```ts
+import type { User } from '@/types';
+```
+
+Reason: Prevents unnecessary runtime imports.
+
+---
+
+## 17) Prefer Exhaustive Checks With `never`
+
+```ts
+const handleState = (state: RequestState) => {
+	switch (state.status) {
+		case 'idle':
+			return;
+		case 'loading':
+			return;
+		case 'success':
+			return state.data;
+		case 'error':
+			throw new Error(state.message);
+		default:
+			const _exhaustive: never = state;
+			return _exhaustive;
+	}
+};
+```
+
+Reason: Ensures all cases are handled.
+
+---
+
+## 18) Keep Types Close to Their Domain
+
+Types should be organized in the `src/modules/types/` directory.
+
+Use PascalCase file names matching the type name (singular form). Each file exports related types and interfaces.
+
+```
+src/modules/types/
+  User.ts
+  Organization.ts
+  Member.ts
+  ResourceType.ts
+  Reservations.ts
+```
+
+Use `import type` when importing types from these files:
+
+```ts
+import type { User } from '@/modules/types/User';
+import type { Organization, OrganizationLike } from '@/modules/types/Organization';
+```
+
+Reason: Centralized type definitions improve discoverability and maintainability. Consistent naming makes types easy to locate.
+
+---
+
+## 19) Avoid Unsafe Type Assertions
+
+Avoid `as` type assertions whenever possible. Prefer type guards and safe narrowing instead.
+
+```ts
+// Good
+const parseUser = (data: unknown): User | null => {
+	if (typeof data === 'object' && data !== null && 'id' in data) {
+		return data as User;
+	}
+	return null;
+};
+
+// Avoid
+const user = data as User;
+```
+
+Reason: `as` bypasses TypeScript's type checker and can cause runtime errors. Always narrow types safely through the type system.
+
+---
+
+## 20) Prefer Type Guards When Handling `unknown`
+
+Use type predicates to narrow `unknown` safely and reuse the check across the codebase.
+
+```ts
+// Good
+const isUser = (data: unknown): data is User => {
+	return typeof data === 'object' && data !== null && 'id' in data;
+};
+
+// Avoid
+const user = data as User;
+```
+
+Reason: type guards make narrowing explicit, reusable, and safe — unlike `as` which silently bypasses the type checker.
+
+---
+
+## 21) Prefer `satisfies` for Object Type Validation
+
+Use `satisfies` when you want to validate an object's shape while preserving its literal types.
+
+```ts
+// Good
+const routes = {
+	home: '/',
+	login: '/login',
+} as const satisfies Record<string, string>;
+
+// Avoid
+const routes: Record<string, string> = {
+	home: '/',
+	login: '/login',
+}; // loses literal types — routes.home is string, not '/'
+```
+
+Reason: `satisfies` validates structure at compile time without widening literal types, giving you both safety and autocomplete.

@@ -1,0 +1,244 @@
+---
+description: Code quality and development workflow guidelines. Apply these rules when writing, reviewing, or modifying code to ensure consistency, maintainability, and efficiency.
+globs: ['**/*.{ts,tsx,js,jsx}']
+---
+
+# Code Quality & Development Guidelines
+
+Guidelines for writing clean, maintainable code and efficient development workflow. Combines AI behavior rules, code quality principles, and development processes.
+
+---
+
+## 1) Development Workflow
+
+### File-by-File Changes
+
+- Make changes file by file and provide all edits in a single chunk
+- Avoid multiple-step instructions for the same file
+
+### Verification Before Presentation
+
+- Always verify information before presenting it
+- Do not make assumptions or speculate without clear evidence
+
+### Preserve Existing Code
+
+- Don't remove unrelated code or functionalities
+- Pay attention to preserving existing structures
+
+### No Unnecessary Updates
+
+- Don't suggest updates or changes to files when there are no actual modifications needed
+
+### Provide Real File Links
+
+- Always provide links to the real files, not placeholder references
+
+---
+
+## 2) Code Writing Principles
+
+### Constants Over Magic Numbers
+
+- Replace hard-coded values with named constants
+- Use descriptive constant names that explain the value's purpose
+- Keep constants at the top of the file or in a dedicated constants file
+- For type-safe constant patterns, see typescript.mdc §8
+
+### Meaningful Names
+
+- Variables, functions, and classes should reveal their purpose
+- Names should explain why something exists and how it's used
+- Avoid abbreviations unless they're universally understood
+
+### Single Responsibility
+
+- Each function should do exactly one thing
+- Functions should be small and focused
+- If a function needs a comment to explain what it does, it should be split
+
+### DRY (Don't Repeat Yourself)
+
+- Extract repeated code into reusable functions
+- Share common logic through proper abstraction
+- Maintain single sources of truth
+
+### Clean Structure
+
+- Keep related code together
+- Organize code in a logical hierarchy
+- Use consistent file and folder naming conventions
+
+### Encapsulation
+
+- Hide implementation details
+- Expose clear interfaces
+- Move nested conditionals into well-named functions
+
+---
+
+## 3) Performance Guidelines
+
+### Avoid Nested Loops
+
+- Avoid unnecessary O(n²) operations
+- Consider using Map or Set for lookups instead of nested iterations
+
+### Avoid Heavy Computation in Render
+
+- Expensive calculations should not run inside render logic
+- Move computations outside render or use memoization
+
+### Prefer Map or Set for Lookups
+
+- Use Map/Set instead of repeated array searches when possible
+- O(1) lookups are preferable to O(n) searches
+
+### Memoize Expensive Calculations
+
+- Use memoization for expensive computations when necessary
+- See react.mdc Performance for React-specific patterns (useMemo, useCallback, React.memo)
+
+---
+
+## 4) Documentation & Comments
+
+### Smart Comments
+
+- Don't comment on what the code does - make the code self-documenting
+- Use comments to explain why something is done a certain way
+- Document APIs, complex algorithms, and non-obvious side effects
+
+### No Understanding Feedback
+
+- Avoid giving feedback about understanding in comments or documentation
+
+---
+
+## 5) Code Maintenance
+
+### Continuous Refactoring
+
+- Refactor when fixing bugs or adding features; avoid gratuitous refactoring (see global.mdc Boundary rule).
+- Fix technical debt when it blocks the current task.
+- Leave code cleaner than you found it, without unnecessary scope creep.
+
+### Testing
+
+- Write tests before fixing bugs
+- Keep tests readable and maintainable
+- Test edge cases and error conditions
+- For component testing patterns, see react.mdc Testing
+
+---
+
+## 6) Response Discipline
+
+### Avoid Unnecessary Responses
+
+- Do not include apologies, confirmations, summaries, or explanations unless explicitly requested
+- Focus on delivering the requested changes without extra commentary
+
+### Do Not Speculate
+
+- Never invent functionality or behavior not present in the context
+- Don't ask the user to verify implementations that are visible in the provided context
+- Don't show or discuss the current implementation unless specifically requested
+
+### Avoid Formatting Suggestions
+
+- Do not suggest whitespace or formatting-only changes unless required
+- Only suggest formatting changes when they affect functionality
+
+---
+
+## 7) Accessibility & Semantic HTML
+
+### Use Semantic HTML Elements
+
+- Use semantic HTML elements (`<header>`, `<nav>`, `<main>`, `<article>`, `<section>`, `<aside>`, `<footer>`) instead of generic `<div>` elements
+- Prefer `<button>` over `<div>` with onClick handlers
+- Use proper heading hierarchy (`<h1>` through `<h6>`)
+- Use `<label>` elements for form inputs
+
+```tsx
+// Good
+<main>
+  <header>
+    <h1>Page Title</h1>
+  </header>
+  <section>
+    <article>
+      <h2>Article Title</h2>
+      <p>Content</p>
+    </article>
+  </section>
+</main>
+
+// Avoid
+<div>
+  <div>
+    <div>Page Title</div>
+  </div>
+  <div>
+    <div>Article Title</div>
+    <div>Content</div>
+  </div>
+</div>
+```
+
+### Accessibility Attributes
+
+- Always provide `alt` text for images
+- Use `aria-label` for icon-only buttons
+- Use `aria-describedby` to associate descriptions with form inputs
+- Use `role` attributes when semantic HTML isn't sufficient
+- Ensure interactive elements are keyboard accessible
+
+```tsx
+// Good
+<button aria-label="Close dialog">
+  <CloseIcon />
+</button>
+
+<img src="chart.png" alt="Sales chart showing 20% increase" />
+
+<input
+  type="text"
+  aria-describedby="email-help"
+  aria-invalid={hasError}
+/>
+<span id="email-help">Enter your email address</span>
+
+// Avoid
+<div onClick={handleClose}>
+  <CloseIcon />
+</div>
+
+<img src="chart.png" />
+
+<input type="text" />
+```
+
+### Keyboard Navigation
+
+- Ensure all interactive elements are keyboard accessible
+- Use proper focus management for modals and dropdowns
+- Provide visible focus indicators
+- Support keyboard shortcuts where appropriate
+
+### Color Contrast
+
+- Ensure sufficient color contrast for text (WCAG AA minimum)
+- Don't rely solely on color to convey information
+- Provide alternative indicators (icons, text) for color-coded information
+
+---
+
+## 8) Version Control
+
+### Commit Practices
+
+- Write clear commit messages
+- Make small, focused commits
+- Use meaningful branch names
